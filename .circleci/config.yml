@@ -53,7 +53,7 @@ jobs:
             - "src"
             - ".circleci"
 
-  test:
+  unittest:
     <<: *defaults
     steps:
       - attach_workspace:
@@ -81,7 +81,7 @@ workflows:
   continuous-delivery:
     jobs:
       - build
-      - test:
+      - unittest:
           requires:
             - build
       - deploy:
