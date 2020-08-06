@@ -1,6 +1,7 @@
+from requests.exceptions import RequestException
+
 from app.celery import celery
 from wdf.indexer import Indexer
-from requests.exceptions import RequestException
 
 
 @celery.task(

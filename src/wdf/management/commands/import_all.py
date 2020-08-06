@@ -1,5 +1,5 @@
-from django.core.management.base import BaseCommand
 from django.conf import settings
+from django.core.management.base import BaseCommand
 from scrapinghub import ScrapinghubClient
 
 from app.tasks import import_version
@@ -7,9 +7,6 @@ from app.tasks import import_version
 
 class Command(BaseCommand):
     help = 'Adds specified job to data facility'  # noqa: VNE003
-
-    #def add_arguments(self, parser):
-    #    parser.add_argument('job_tags', type=str)
 
     def handle(self, *args, **options):
         client = ScrapinghubClient(settings.SH_APIKEY)

@@ -1,8 +1,8 @@
 import time
-import pytz
 from datetime import datetime
-from dateutil.parser import parse as date_parse
 
+import pytz
+from dateutil.parser import parse as date_parse
 from django.conf import settings
 from scrapinghub import ScrapinghubClient
 
@@ -163,8 +163,8 @@ class Indexer(object):
         dump_model = Dump(
             crawler=spider_slug,
             job=job_id,
-            crawl_started_at=pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('running_time')/1000)),
-            crawl_ended_at=pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('finished_time')/1000)),
+            crawl_started_at=pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('running_time') / 1000)),
+            crawl_ended_at=pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('finished_time') / 1000)),
         )
 
         dump_model.save()
