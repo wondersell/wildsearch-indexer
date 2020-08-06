@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="d8307b79-0321-40bd-9f52-d497b1091683" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectId" id="1dRamEoL6yXxdpCK8Q2hoHAts8Y" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PythonContentEntriesConfigurable" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src/app" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src" />
+    </key>
+  </component>
+  <component name="ServiceViewManager">
+    <option name="viewStates">
+      <list>
+        <serviceView>
+          <treeState>
+            <expand />
+            <select />
+          </treeState>
+        </serviceView>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="d8307b79-0321-40bd-9f52-d497b1091683" name="Default Changelist" comment="" />
+      <created>1592390516919</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1592390516919</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="640" y="381" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1596692732998">
+      <screen x="48" y="23" width="1744" height="1097" />
+    </state>
+    <state x="640" y="381" key="#com.intellij.fileTypes.FileTypeChooser/48.23.1744.1097@48.23.1744.1097" timestamp="1596692732998" />
+    <state x="421" y="210" width="1254" height="722" key="SettingsEditor" timestamp="1596629122880">
+      <screen x="48" y="23" width="1744" height="1097" />
+    </state>
+    <state x="421" y="210" width="1254" height="722" key="SettingsEditor/48.23.1744.1097@48.23.1744.1097" timestamp="1596629122880" />
+    <state x="575" y="335" width="689" height="472" key="find.popup" timestamp="1592423350531">
+      <screen x="48" y="23" width="1744" height="1097" />
+    </state>
+    <state x="575" y="335" width="689" height="472" key="find.popup/48.23.1744.1097@48.23.1744.1097" timestamp="1592423350531" />
+    <state x="585" y="268" width="670" height="676" key="search.everywhere.popup" timestamp="1592486926089">
+      <screen x="48" y="23" width="1744" height="1097" />
+    </state>
+    <state x="585" y="268" width="670" height="676" key="search.everywhere.popup/48.23.1744.1097@48.23.1744.1097" timestamp="1592486926089" />
+    <state x="650" y="483" key="vcs.readOnlyHandler.ReadOnlyStatusDialog" timestamp="1596230860414">
+      <screen x="48" y="23" width="1744" height="1097" />
+    </state>
+    <state x="650" y="483" key="vcs.readOnlyHandler.ReadOnlyStatusDialog/48.23.1744.1097@48.23.1744.1097" timestamp="1596230860414" />
+  </component>
+</project>
