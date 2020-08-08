@@ -3,6 +3,9 @@
   <component name="ChangeListManager">
     <list default="true" id="d8307b79-0321-40bd-9f52-d497b1091683" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Procfile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/src/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Dockerfile_heroku" beforeDir="false" afterPath="$PROJECT_DIR$/src/Dockerfile_heroku" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -79,24 +82,32 @@
       <option name="project" value="LOCAL" />
       <updated>1596880240632</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Flake8  notice">
+      <created>1596880521168</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1596880521168</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Coding styles" />
     <MESSAGE value="Circle CI config altered" />
     <MESSAGE value="Heroku deploy" />
-    <option name="LAST_COMMIT_MESSAGE" value="Heroku deploy" />
+    <MESSAGE value="Flake8  notice" />
+    <option name="LAST_COMMIT_MESSAGE" value="Flake8  notice" />
   </component>
   <component name="WindowStateProjectService">
     <state x="640" y="381" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1596692732998">
       <screen x="48" y="23" width="1744" height="1097" />
     </state>
     <state x="640" y="381" key="#com.intellij.fileTypes.FileTypeChooser/48.23.1744.1097@48.23.1744.1097" timestamp="1596692732998" />
-    <state x="542" y="176" key="CommitChangelistDialog2" timestamp="1596880240552">
+    <state x="542" y="176" key="CommitChangelistDialog2" timestamp="1596880521110">
       <screen x="48" y="23" width="1744" height="1097" />
     </state>
-    <state x="542" y="176" key="CommitChangelistDialog2/48.23.1744.1097@48.23.1744.1097" timestamp="1596880240552" />
+    <state x="542" y="176" key="CommitChangelistDialog2/48.23.1744.1097@48.23.1744.1097" timestamp="1596880521110" />
     <state x="421" y="210" width="1254" height="722" key="SettingsEditor" timestamp="1596629122880">
       <screen x="48" y="23" width="1744" height="1097" />
     </state>

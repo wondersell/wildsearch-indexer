@@ -10,4 +10,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN mkdir -p /srv
 
-WORKDIR /
+WORKDIR /srv
