@@ -7,8 +7,8 @@ from django.conf import settings
 from scrapinghub import ScrapinghubClient
 
 from wdf.models import (
-    DictBrand, DictCatalog, DictMarketplace, DictParameter, Dump, Parameter, Price, Rating, Reviews, Sales, Sku,
-    Version)
+    DictBrand, DictCatalog, DictMarketplace, DictParameter, Dump, Parameter, Position, Price, Rating, Reviews, Sales,
+    Sku, Version)
 
 
 class Indexer(object):
@@ -97,7 +97,7 @@ class Indexer(object):
 
             return
 
-        self.sh_client = self.get_sh_client()
+        self.init_client()
         self.generator = self.get_generator(job_id=job_id, chunk_size=chunk_size)
         self.marketplace_model = self.get_marketplace_model(spider_slug)
         self.dump_model = self.get_dump_model(spider_slug, job_id)
@@ -114,7 +114,7 @@ class Indexer(object):
                 self.collect_wb_parameters(item)
                 self.collect_wb_skus(item)
 
-            self.update_brands_cache(self.catalogs)
+            self.update_catalogs_cache(self.catalogs)
             self.update_brands_cache(self.brands)
             self.update_parameters_cache(self.parameters)
             self.update_sku_cache(self.skus)
@@ -128,6 +128,7 @@ class Indexer(object):
                 self.save_sales(version, item)
                 self.save_reviews(version, item)
                 self.save_parameters(version, item)
+                self.save_position(version, item)
 
             time_spent = time.time() - start_time
 
@@ -137,17 +138,13 @@ class Indexer(object):
 
             chunk_no += 1
 
-    @staticmethod
-    def get_sh_client():
-        client_key = settings.SH_APIKEY
-
-        return ScrapinghubClient(client_key)
+    def init_client(self):
+        self.sh_client = ScrapinghubClient(settings.SH_APIKEY)
 
     def get_generator(self, job_id, chunk_size=500):
         return self.sh_client.get_job(job_id).items.list_iter(chunksize=chunk_size)
 
-    @staticmethod
-    def get_marketplace_model(spider_slug):
+    def get_marketplace_model(self, spider_slug):
         try:
             marketplace_model = DictMarketplace.objects.get(slug=spider_slug)
         except DictMarketplace.DoesNotExist:
@@ -181,6 +178,15 @@ class Indexer(object):
         version.save()
 
         return version
+
+    def save_position(self, version, item):
+        if 'wb_category_position' in item.keys():
+            Position(
+                sku_id=self.sku_cache[item['wb_id']],
+                version=version,
+                catalog_id=self.catalog_cache[item['wb_category_url']],
+                absolute=item['wb_category_position'],
+            )
 
     def save_price(self, version, item):
         if 'wb_price' in item.keys():
