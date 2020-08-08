@@ -162,7 +162,8 @@ HEALTH_CHECKS = {
 
 
 # Celery configs
-CELERY_BACKEND = env('REDIS_URL')
+CELERY_BROKER_URL = env('REDIS_URL')
+CELERY_RESULT_BACKEND = env('REDIS_URL')
 CELERY_ALWAYS_EAGER = env('CELERY_ALWAYS_EAGER', cast=bool, default=DEBUG)  # by default in debug mode we run all celery tasks in foregroud.
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_ENABLE_UTC = False
