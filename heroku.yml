@@ -1,0 +1,15 @@
+setup:
+  addons:
+    - plan: heroku-redis
+build:
+  docker:
+    indexer: src/Dockerfile_heroku
+run:
+  web:
+    command:
+      - gunicorn app.wsgi
+    image: indexer
+  worker:
+    command:
+      - celery -A app worker
+    image: indexer
