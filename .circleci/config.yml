@@ -8,7 +8,7 @@ defaults: &defaults
     - image: circleci/python:3.8-buster
       environment:
         - DATABASE_URL=sqlite:////tmp/prj.sqlite
-        - CELERY_BACKEND=redis://redis:6379
+        - REDIS_URL=redis://redis:6379
 
     - image: circleci/redis:4.0.14-alpine3.10
       name: redis
