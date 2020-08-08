@@ -112,3 +112,6 @@ venv
 static
 .env
 db.sqlite
+
+# PyCharm
+.idea
