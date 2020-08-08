@@ -43,7 +43,7 @@ jobs:
           name: Run linters
           command: |
             . venv/bin/activate
-            flake8
+            cd src && flake8
 
       - persist_to_workspace:
           root: .
