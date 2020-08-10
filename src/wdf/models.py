@@ -106,7 +106,7 @@ class Position(models.Model):
     version = models.ForeignKey('Version', on_delete=models.CASCADE)
     catalog = models.ForeignKey('DictCatalog', on_delete=models.CASCADE)
     absolute = models.PositiveIntegerField()
-    percintile = models.FloatField()
+    percintile = models.FloatField(null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
