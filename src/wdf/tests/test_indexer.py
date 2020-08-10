@@ -257,6 +257,15 @@ def test_save_position(indexer_filled_with_caches, item_sample, version_sample):
 
 
 @pytest.mark.django_db
+def test_save_position_empty(indexer_filled_with_caches, item_sample, version_sample):
+    item_sample.pop('wb_category_position', None)
+
+    indexer_filled_with_caches.save_position(version_sample, item_sample)
+
+    assert len(Position.objects.all()) == 0
+
+
+@pytest.mark.django_db
 def test_save_price(indexer_filled_with_caches, item_sample, version_sample):
     indexer_filled_with_caches.save_price(version_sample, item_sample)
 
@@ -266,6 +275,15 @@ def test_save_price(indexer_filled_with_caches, item_sample, version_sample):
 
     assert obj.sku.article == '11743005'
     assert obj.price == 800
+
+
+@pytest.mark.django_db
+def test_save_price_empty(indexer_filled_with_caches, item_sample, version_sample):
+    item_sample.pop('wb_price', None)
+
+    indexer_filled_with_caches.save_price(version_sample, item_sample)
+
+    assert len(Price.objects.all()) == 0
 
 
 @pytest.mark.django_db
@@ -281,6 +299,15 @@ def test_save_rating(indexer_filled_with_caches, item_sample, version_sample):
 
 
 @pytest.mark.django_db
+def test_save_rating_empty(indexer_filled_with_caches, item_sample, version_sample):
+    item_sample.pop('wb_rating', None)
+
+    indexer_filled_with_caches.save_rating(version_sample, item_sample)
+
+    assert len(Rating.objects.all()) == 0
+
+
+@pytest.mark.django_db
 def test_save_sales(indexer_filled_with_caches, item_sample, version_sample):
     indexer_filled_with_caches.save_sales(version_sample, item_sample)
 
@@ -290,6 +317,15 @@ def test_save_sales(indexer_filled_with_caches, item_sample, version_sample):
 
     assert obj.sku.article == '11743005'
     assert obj.sales == 200
+
+
+@pytest.mark.django_db
+def test_save_sales_empty(indexer_filled_with_caches, item_sample, version_sample):
+    item_sample.pop('wb_purchases_count', None)
+
+    indexer_filled_with_caches.save_sales(version_sample, item_sample)
+
+    assert len(Sales.objects.all()) == 0
 
 
 @pytest.mark.django_db
@@ -305,6 +341,15 @@ def test_save_reviews(indexer_filled_with_caches, item_sample, version_sample):
 
 
 @pytest.mark.django_db
+def test_save_reviews_empty(indexer_filled_with_caches, item_sample, version_sample):
+    item_sample.pop('wb_reviews_count', None)
+
+    indexer_filled_with_caches.save_reviews(version_sample, item_sample)
+
+    assert len(Reviews.objects.all()) == 0
+
+
+@pytest.mark.django_db
 def test_save_parameters(indexer_filled_with_caches, item_sample, version_sample):
     indexer_filled_with_caches.save_parameters(version_sample, item_sample)
 
@@ -315,3 +360,25 @@ def test_save_parameters(indexer_filled_with_caches, item_sample, version_sample
     assert obj.sku.article == '11743005'
     assert obj.parameter.name == 'Вид животного'
     assert obj.value == 'для кошек; для собак'
+
+
+@pytest.mark.django_db
+def test_save_parameters_empty(indexer_filled_with_caches, item_sample, version_sample):
+    item_sample.pop('features', None)
+
+    indexer_filled_with_caches.save_parameters(version_sample, item_sample)
+
+    assert len(Parameter.objects.all()) == 0
+
+
+@pytest.mark.django_db
+def test_save_all(indexer_filled_with_caches, item_sample, version_sample):
+    indexer_filled_with_caches.save_all(version_sample, item_sample)
+
+    assert len(Version.objects.all()) == 1
+    assert len(Position.objects.all()) == 1
+    assert len(Price.objects.all()) == 1
+    assert len(Rating.objects.all()) == 1
+    assert len(Sales.objects.all()) == 1
+    assert len(Reviews.objects.all()) == 1
+    assert len(Parameter.objects.all()) == 10
