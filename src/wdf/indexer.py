@@ -127,6 +127,9 @@ class Indexer(object):
 
             chunk_no += 1
 
+        self.dump_model.state = 'finished'
+        self.dump_model.save()
+
     def get_generator(self, job_id, chunk_size=500):
         return self.sh_client.get_job(job_id).items.list_iter(chunksize=chunk_size)
 
@@ -156,6 +159,8 @@ class Indexer(object):
             job=job_id,
             crawl_started_at=pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('running_time') / 1000)),
             crawl_ended_at=pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('finished_time') / 1000)),
+            state='processing',
+            items_crawled=job_metadata.get('scrapystats')['item_scraped_count'],
         )
 
         dump.save()
