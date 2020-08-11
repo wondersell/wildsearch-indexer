@@ -11,7 +11,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         client = ScrapinghubClient(settings.SH_APIKEY)
 
-        for job in client.get_project(settings.SH_PROJECT_ID).jobs.iter(has_tag=['everything_weekly']):
+        for job in client.get_project(settings.SH_PROJECT_ID).jobs.iter(has_tag=['everything_weekly'], state='finished'):
             job_id = job['key']
             import_version(job_id=job_id).delay()
             self.stdout.write(self.style.SUCCESS(
