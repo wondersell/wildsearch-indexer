@@ -1,3 +1,4 @@
+import logging
 import time
 from datetime import datetime
 
@@ -9,6 +10,9 @@ from scrapinghub import ScrapinghubClient
 from wdf.models import (
     DictBrand, DictCatalog, DictMarketplace, DictParameter, Dump, Parameter, Position, Price, Rating, Reviews, Sales,
     Sku, Version)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class Indexer(object):
@@ -93,9 +97,7 @@ class Indexer(object):
 
     def process_job(self, job_id, chunk_size=500):
         if Dump.objects.filter(job=job_id).count() > 0:
-            if self.stdout is not None:
-                self.stdout.write(self.style.SUCCESS(
-                    f'Dump for job {job_id} already exists, skipping'))
+            logger.warning(f'Dump for job {job_id} already exists, skipping')
 
             return
 
@@ -121,9 +123,7 @@ class Indexer(object):
 
             time_spent = time.time() - start_time
 
-            if self.stdout is not None:
-                self.stdout.write(self.style.SUCCESS(
-                    f'Chunk #{chunk_no} processed in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min'))
+            logger.info(f'Chunk #{chunk_no} processed in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min')
 
             chunk_no += 1
 
