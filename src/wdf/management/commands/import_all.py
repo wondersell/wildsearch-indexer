@@ -6,7 +6,7 @@ from app.tasks import import_version
 
 
 class Command(BaseCommand):
-    help = 'Adds specified job to data facility'  # noqa: VNE003
+    help = 'Adds all everything_weekly jobs to data facility'  # noqa: VNE003
 
     def handle(self, *args, **options):
         client = ScrapinghubClient(settings.SH_APIKEY)
