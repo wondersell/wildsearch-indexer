@@ -211,7 +211,7 @@ class DictCatalog(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
     marketplace = models.ForeignKey('DictMarketplace', on_delete=models.CASCADE)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, default=None)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, null=True, default=None)
     url = models.URLField()
     level = models.IntegerField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
