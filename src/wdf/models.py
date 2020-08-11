@@ -7,6 +7,9 @@ class Dump(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
     crawler = models.CharField(max_length=20)
     job = models.CharField(max_length=20)
+    job_type = models.CharField(max_length=20, blank=True, default='')
+    state = models.CharField(max_length=20, blank=True, default='')
+    items_crawled = models.IntegerField(null=True)
     crawl_started_at = models.DateTimeField()
     crawl_ended_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -211,7 +214,7 @@ class DictCatalog(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
     marketplace = models.ForeignKey('DictMarketplace', on_delete=models.CASCADE)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, default=None)
-    name = models.CharField(max_length=255, null=True, default=None)
+    name = models.CharField(max_length=255, blank=True, default='')
     url = models.URLField()
     level = models.IntegerField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
