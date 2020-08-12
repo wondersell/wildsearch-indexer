@@ -42,7 +42,7 @@ class Sku(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
     title = models.CharField(max_length=512)
     marketplace = models.ForeignKey('DictMarketplace', on_delete=models.CASCADE)
-    brand = models.ForeignKey('DictBrand', on_delete=models.CASCADE)
+    brand = models.ForeignKey('DictBrand', on_delete=models.CASCADE, null=True, default=None)
     article = models.CharField(max_length=20)
     url = models.URLField()
     created_at = models.DateTimeField(auto_now_add=True)

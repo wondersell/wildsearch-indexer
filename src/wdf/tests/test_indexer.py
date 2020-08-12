@@ -223,6 +223,13 @@ def test_update_sku_cache_empty_cache(indexer_filled):
 
 
 @pytest.mark.django_db
+def test_update_sku_cache_without_brands(indexer_filled):
+    indexer_filled.update_sku_cache(indexer_filled.skus)
+
+    assert len(indexer_filled.sku_cache) == 26
+
+
+@pytest.mark.django_db
 def test_update_all_caches(indexer_filled):
     indexer_filled.update_all_caches(indexer_filled.catalogs, indexer_filled.brands, indexer_filled.parameters, indexer_filled.skus)
 

@@ -368,11 +368,13 @@ class Indexer(object):
         for sku_article in self.filter_items_not_found(self.skus, 'sku_cache', Sku, 'article'):
             new_model = Sku(
                 marketplace_id=retrieved[sku_article]['marketplace'],
-                brand_id=self.brand_cache[retrieved[sku_article]['brand']],
                 article=retrieved[sku_article]['article'],
                 url=retrieved[sku_article]['url'],
                 title=retrieved[sku_article]['title'],
             )
+
+            if len(self.brand_cache.keys()) > 0 and retrieved[sku_article]['brand'] is not None:
+                new_model.brand_id = self.brand_cache[retrieved[sku_article]['brand']]
 
             new_model.save()
 
