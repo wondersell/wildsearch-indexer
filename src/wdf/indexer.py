@@ -301,7 +301,7 @@ class Indexer(object):
             'parse_date': item['parse_date'],
             'marketplace': self.marketplace_model.id,
             'brand': item['wb_brand_url'] if 'wb_brand_url' in item.keys() else None,
-            'article':  guess_wb_article(item),
+            'article': guess_wb_article(item),
             'url': item['product_url'],
             'title': item['product_name'],
         }
