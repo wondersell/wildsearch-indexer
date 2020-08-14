@@ -6,7 +6,7 @@ import pytz
 from dateutil.parser import parse as date_parse
 from mixer.backend.django import mixer
 
-from wdf.indexer import Indexer
+from wdf.indexer import Indexer, guess_wb_article
 from wdf.models import DictCatalog, Parameter, Position, Price, Rating, Reviews, Sales, Sku, Version
 
 
@@ -389,3 +389,15 @@ def test_save_all(indexer_filled_with_caches, item_sample, version_sample):
     assert len(Sales.objects.all()) == 1
     assert len(Reviews.objects.all()) == 1
     assert len(Parameter.objects.all()) == 10
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('sample_item, expected_article', [
+    [{'wb_id': '12345', 'product_url': 'https://www.wildberries.ru/catalog/7402496/detail.aspx'}, '12345'],
+    [{'wb_id': '2020-08-13 03:00:45.275365', 'product_url': 'https://www.wildberries.ru/catalog/7402496/detail.aspx'}, '7402496'],
+    [{'wb_id': '52423', 'product_url': 'https://www.wildberries.ru/catalog/7402496/detail.aspx'}, '52423'],
+])
+def test_guess_wb_article(sample_item, expected_article):
+    article = guess_wb_article(sample_item)
+
+    assert article == expected_article

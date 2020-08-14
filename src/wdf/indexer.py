@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 from datetime import datetime
 
@@ -300,7 +301,7 @@ class Indexer(object):
             'parse_date': item['parse_date'],
             'marketplace': self.marketplace_model.id,
             'brand': item['wb_brand_url'] if 'wb_brand_url' in item.keys() else None,
-            'article': item['wb_id'],
+            'article':  guess_wb_article(item),
             'url': item['product_url'],
             'title': item['product_name'],
         }
@@ -379,3 +380,10 @@ class Indexer(object):
             new_model.save()
 
             self.sku_cache[sku_article] = new_model.id
+
+
+def guess_wb_article(item):
+    if len(str(item['wb_id'])) > 20:
+        return re.findall(r'\/catalog\/(\d{1,20})\/detail\.aspx', item['product_url'])[0]
+    else:
+        return item['wb_id']
