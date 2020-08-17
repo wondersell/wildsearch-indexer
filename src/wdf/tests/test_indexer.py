@@ -1,6 +1,3 @@
-import json
-import os
-
 import pytest
 import pytz
 from dateutil.parser import parse as date_parse
@@ -8,52 +5,6 @@ from mixer.backend.django import mixer
 
 from wdf.indexer import Indexer, guess_wb_article
 from wdf.models import DictCatalog, Parameter, Position, Price, Rating, Reviews, Sales, Sku, Version
-
-
-@pytest.fixture()
-def current_path():
-    return os.path.dirname(os.path.abspath(__file__))
-
-
-@pytest.fixture()
-def indexer():
-    return Indexer()
-
-
-@pytest.fixture()
-def items_sample(current_path):
-    with open(current_path + '/mocks/items_list.json') as f:
-        return json.loads(f.read())
-
-
-@pytest.fixture()
-def item_sample(items_sample):
-    return items_sample[0]
-
-
-@pytest.fixture()
-def indexer_filled(indexer, items_sample):
-    for item in items_sample:
-        indexer.collect_all(item)
-
-    return indexer
-
-
-@pytest.fixture()
-def indexer_filled_with_caches(indexer_filled):
-    indexer_filled.update_all_caches(
-        indexer_filled.catalogs,
-        indexer_filled.brands,
-        indexer_filled.parameters,
-        indexer_filled.skus,
-    )
-
-    return indexer_filled
-
-
-@pytest.fixture()
-def version_sample():
-    return mixer.blend(Version)
 
 
 @pytest.mark.django_db
@@ -240,8 +191,8 @@ def test_update_all_caches(indexer_filled):
 
 
 @pytest.mark.django_db
-def test_save_version(indexer_filled_with_caches, item_sample):
-    indexer_filled_with_caches.save_version(item_sample)
+def test_save_version(indexer_filled_with_caches, dump_sample, item_sample):
+    indexer_filled_with_caches.save_version(dump_sample, item_sample)
 
     assert len(Version.objects.all()) == 1
 

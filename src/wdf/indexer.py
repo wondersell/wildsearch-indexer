@@ -82,9 +82,7 @@ class Indexer(object):
         self.style = style
 
         self.marketplace_model = self.get_marketplace_model(self.spider_slug)
-        self.dump_model = None
         self.sh_client = ScrapinghubClient(settings.SH_APIKEY)
-        self.generator = None
 
         self.catalog_cache = {}
         self.brand_cache = {}
@@ -102,25 +100,14 @@ class Indexer(object):
 
             return
 
-        self.generator = self.get_generator(job_id=job_id, chunk_size=chunk_size)
-        self.dump_model = self.save_dump(self.spider_slug, job_id)
+        generator = self.get_generator(job_id=job_id, chunk_size=chunk_size)
+        dump = self.save_dump(self.spider_slug, job_id)
 
         chunk_no = 1
-        for chunk in self.generator:
+        for chunk in generator:
             start_time = time.time()
 
-            self.clear_collections()
-
-            for item in chunk:
-                self.collect_all(item)
-
-            self.update_all_caches(self.catalogs, self.brands, self.parameters, self.skus)
-
-            # Записываем версии для каждого артикула
-            for item in chunk:
-                version = self.save_version(item)
-
-                self.save_all(version, item)
+            self.process_chunk(dump, chunk)
 
             time_spent = time.time() - start_time
 
@@ -128,11 +115,25 @@ class Indexer(object):
 
             chunk_no += 1
 
-        self.dump_model.state = 'finished'
-        self.dump_model.save()
+        dump.state = 'finished'
+        dump.save()
 
     def get_generator(self, job_id, chunk_size=500):
         return self.sh_client.get_job(job_id).items.list_iter(chunksize=chunk_size)
+
+    def process_chunk(self, dump, chunk):
+        self.clear_collections()
+
+        for item in chunk:
+            self.collect_all(item)
+
+        self.update_all_caches(self.catalogs, self.brands, self.parameters, self.skus)
+
+        # Записываем версии для каждого артикула
+        for item in chunk:
+            version = self.save_version(dump, item)
+
+            self.save_all(version, item)
 
     def get_marketplace_model(self, spider_slug):
         try:
@@ -168,9 +169,9 @@ class Indexer(object):
 
         return dump
 
-    def save_version(self, item):
+    def save_version(self, dump, item):
         version = Version(
-            dump=self.dump_model,
+            dump=dump,
             sku_id=self.sku_cache[item['wb_id']],
             crawled_at=pytz.utc.localize(date_parse(item['parse_date'])),
         )
