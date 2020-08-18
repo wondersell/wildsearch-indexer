@@ -6,7 +6,7 @@ from wdf.models import (
 
 
 @pytest.mark.django_db
-def test_delete_dump(fill_db):
+def test_delete_dump(_fill_db):
     # проверяем, что всё на месте после загрузки БД
     assert len(Dump.objects.all()) == 1
     assert len(Version.objects.all()) == 26
