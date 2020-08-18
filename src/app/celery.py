@@ -13,4 +13,4 @@ celery = Celery('app')
 
 celery.config_from_object(settings, namespace='CELERY')
 
-# celery.autodiscover_tasks(lambda: settings.INSTALLED_APPS)  # noqa E800
+celery.autodiscover_tasks(lambda: settings.INSTALLED_APPS)  # noqa E800
