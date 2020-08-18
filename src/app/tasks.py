@@ -5,7 +5,6 @@ from wdf.indexer import Indexer
 
 
 @celery.task(
-    name='app.tasks.import_version',
     autoretry_for=[RequestException],
     retry_kwargs={
         'max_retries': 10,
