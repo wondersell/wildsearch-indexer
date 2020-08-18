@@ -5,8 +5,9 @@ from wdf.models import (
     Sku, Version)
 
 
+@pytest.mark.usefixtures('_fill_db')
 @pytest.mark.django_db
-def test_delete_dump(_fill_db):
+def test_delete_dump():
     # проверяем, что всё на месте после загрузки БД
     assert len(Dump.objects.all()) == 1
     assert len(Version.objects.all()) == 26
