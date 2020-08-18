@@ -60,5 +60,5 @@ def dump_sample():
 
 
 @pytest.fixture()
-def fill_db(indexer_filled_with_caches, items_sample, dump_sample):
+def _fill_db(indexer_filled_with_caches, items_sample, dump_sample):
     indexer_filled_with_caches.process_chunk(dump_sample, items_sample)

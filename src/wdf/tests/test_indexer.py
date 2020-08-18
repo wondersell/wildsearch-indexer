@@ -3,7 +3,7 @@ import pytz
 from dateutil.parser import parse as date_parse
 from mixer.backend.django import mixer
 
-from wdf.indexer import Indexer, guess_wb_article
+from wdf.indexer import guess_wb_article
 from wdf.models import DictCatalog, Parameter, Position, Price, Rating, Reviews, Sales, Sku, Version
 
 

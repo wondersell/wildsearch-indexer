@@ -1,8 +1,8 @@
 import pytest
 
 from wdf.models import (
-    DictBrand, DictCatalog, DictMarketplace, DictParameter, DictSeller, Dump, Parameter, Position, Price, Rating,
-    Reviews, Sales, Seller, Sku, Version)
+    DictBrand, DictCatalog, DictMarketplace, DictParameter, Dump, Parameter, Position, Price, Rating, Reviews, Sales,
+    Sku, Version)
 
 
 @pytest.mark.django_db
