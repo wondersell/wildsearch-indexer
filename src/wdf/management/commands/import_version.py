@@ -20,4 +20,4 @@ class Command(BaseCommand):
         logger.addHandler(console)
 
         indexer = Indexer(stdout=self.stdout, style=self.style)
-        indexer.process_job(job_id=options['job_id'], chunk_size=options['chunk_size'])
+        indexer.process_job_end_to_end(job_id=options['job_id'], chunk_size=options['chunk_size'])

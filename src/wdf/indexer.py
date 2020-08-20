@@ -75,11 +75,8 @@ class Indexer(object):
        в этом случае никакого rc не должно быть
     """
 
-    def __init__(self, stdout=None, style=None):
+    def __init__(self):
         self.spider_slug = 'wb'
-
-        self.stdout = stdout
-        self.style = style
 
         self.marketplace_model = self.get_marketplace_model(self.spider_slug)
         self.sh_client = ScrapinghubClient(settings.SH_APIKEY)
@@ -94,14 +91,45 @@ class Indexer(object):
         self.skus = {}
         self.parameters = {}
 
-    def process_job(self, job_id, chunk_size=500):
-        if Dump.objects.filter(job=job_id).count() > 0:
-            logger.warning(f'Dump for job {job_id} already exists, skipping')
-
-            return
-
+    def prepare_dump(self, job_id, chunk_size=500):
         generator = self.get_generator(job_id=job_id, chunk_size=chunk_size)
-        dump = self.save_dump(self.spider_slug, job_id)
+
+        dump = self.get_or_save_dump(self.spider_slug, job_id)
+        dump.set_state(Dump.PREPARING)
+        dump.save()
+
+        overall_start_time = time.time()
+
+        chunk_no = 1
+        for chunk in generator:
+            start_time = time.time()
+
+            for item in chunk:
+                self.collect_all(item)
+
+            self.update_all_caches(self.catalogs, self.brands, self.parameters, self.skus)
+
+            time_spent = time.time() - start_time
+
+            logger.info(f'Chunk #{chunk_no} prepared in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min')
+
+            chunk_no += 1
+
+        dump.set_state(Dump.PREPARED)
+        dump.save()
+
+        overall_time_spent = time.time() - overall_start_time
+
+        logger.info(f'{dump} prepared in {overall_time_spent}s, {round(dump.items_crawled / overall_time_spent * 60)} items/min')
+
+        return dump
+
+    def import_batch(self, job_id, start=0, count=None, chunk_size=500):
+        dump = self.get_or_save_dump(self.spider_slug, job_id)
+
+        generator = self.get_generator(job_id=job_id, start=start, count=count, chunk_size=chunk_size)
+
+        overall_start_time = time.time()
 
         chunk_no = 1
         for chunk in generator:
@@ -111,18 +139,18 @@ class Indexer(object):
 
             time_spent = time.time() - start_time
 
-            logger.info(f'Chunk #{chunk_no} processed in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min')
+            logger.info(f'Chunk #{chunk_no} imported in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min')
 
             chunk_no += 1
 
-        dump.state = 'finished'
-        dump.save()
+        overall_time_spent = time.time() - overall_start_time
 
-    def get_generator(self, job_id, chunk_size=500):
-        return self.sh_client.get_job(job_id).items.list_iter(chunksize=chunk_size)
+        logger.info(f'Batch imported in {overall_time_spent}s, {round(count / overall_time_spent * 60)} items/min')
+
+        return dump
 
     def process_chunk(self, dump, chunk):
-        self.clear_collections()
+        # self.clear_collections()  # noqa: E800
 
         for item in chunk:
             self.collect_all(item)
@@ -134,6 +162,9 @@ class Indexer(object):
             version = self.save_version(dump, item)
 
             self.save_all(version, item)
+
+    def get_generator(self, job_id, chunk_size=500, start=0, count=None):
+        return self.sh_client.get_job(job_id).items.list_iter(chunksize=chunk_size, start=start, count=count)
 
     def get_marketplace_model(self, spider_slug):
         try:
@@ -153,19 +184,22 @@ class Indexer(object):
         self.save_parameters(version, item)
         self.save_position(version, item)
 
-    def save_dump(self, spider_slug, job_id):
-        job_metadata = self.sh_client.get_job(job_id).metadata
+    def get_or_save_dump(self, spider_slug, job_id):
+        if Dump.objects.filter(job=job_id).count() > 0:
+            dump = Dump.objects.filter(job=job_id).first()
+        else:
+            job_metadata = self.sh_client.get_job(job_id).metadata
 
-        dump = Dump(
-            crawler=spider_slug,
-            job=job_id,
-            crawl_started_at=pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('running_time') / 1000)),
-            crawl_ended_at=pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('finished_time') / 1000)),
-            state='processing',
-            items_crawled=job_metadata.get('scrapystats')['item_scraped_count'],
-        )
+            dump = Dump(
+                crawler=spider_slug,
+                job=job_id,
+                crawl_started_at=pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('running_time') / 1000)),
+                crawl_ended_at=pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('finished_time') / 1000)),
+                state='processing',
+                items_crawled=job_metadata.get('scrapystats')['item_scraped_count'],
+            )
 
-        dump.save()
+            dump.save()
 
         return dump
 

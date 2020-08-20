@@ -2,7 +2,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from scrapinghub import ScrapinghubClient
 
-from app.tasks import import_version
+from wdf.tasks import prepare_dump
 
 
 class Command(BaseCommand):
@@ -17,6 +17,5 @@ class Command(BaseCommand):
 
         for job in client.get_project(settings.SH_PROJECT_ID).jobs.iter(has_tag=options['tags'].split(','), state=options['state']):
             job_id = job['key']
-            import_version(job_id=job_id).delay()
-            self.stdout.write(self.style.SUCCESS(
-                f'Job #{job_id} added to process queue'))
+            prepare_dump(job_id=job_id).delay()
+            self.stdout.write(self.style.SUCCESS(f'Job #{job_id} added to process queue'))

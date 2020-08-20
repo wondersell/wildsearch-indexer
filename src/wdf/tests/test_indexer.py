@@ -4,7 +4,7 @@ from dateutil.parser import parse as date_parse
 from mixer.backend.django import mixer
 
 from wdf.indexer import guess_wb_article
-from wdf.models import DictCatalog, Parameter, Position, Price, Rating, Reviews, Sales, Sku, Version
+from wdf.models import DictCatalog, Dump, Parameter, Position, Price, Rating, Reviews, Sales, Sku, Version
 
 
 @pytest.mark.django_db
@@ -352,3 +352,30 @@ def test_guess_wb_article(sample_item, expected_article):
     article = guess_wb_article(sample_item)
 
     assert article == expected_article
+
+
+@pytest.mark.django_db
+def test_process_dump_new(indexer_filled):
+    assert len(Dump.objects.all()) == 0
+
+    indexer_filled.get_or_save_dump('wb', '12345/123/12345')
+
+    assert len(Dump.objects.all()) == 1
+
+    obj = Dump.objects.first()
+
+    assert obj.crawler == 'wb'
+    assert obj.job == '12345/123/12345'
+    assert obj.state == 'processing'
+
+
+@pytest.mark.django_db
+def test_process_dump_existing(indexer_filled, dump_sample):
+    dump_sample.job = '12345/123/12345'
+    dump_sample.save()
+
+    assert len(Dump.objects.all()) == 1
+
+    obj = indexer_filled.get_or_save_dump('wb', '12345/123/12345')
+
+    assert obj.job == '12345/123/12345'

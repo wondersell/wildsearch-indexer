@@ -27,7 +27,7 @@ pytest-freezegun
 pytest-mock
 pytest-randomly
 
-
+requests_mock
 freezegun
 mixer
 

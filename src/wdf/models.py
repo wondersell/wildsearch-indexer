@@ -4,15 +4,38 @@ from django.db import models
 
 
 class Dump(models.Model):
+    CREATED = 0
+    PREPARING = 5
+    PREPARED = 10
+    SCHEDULING = 15
+    SCHEDULED = 20
+    PROCESSING = 25
+    PROCESSED = 30
+
+    State_codes = (
+        (CREATED, 'Created'),
+        (PREPARING, 'Preparing'),
+        (PREPARED, 'Prepared'),
+        (SCHEDULING, 'Scheduling'),
+        (SCHEDULED, 'Scheduled'),
+        (PROCESSING, 'Processing'),
+        (PROCESSED, 'Processed'),
+    )
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
     crawler = models.CharField(max_length=20)
     job = models.CharField(max_length=20)
     job_type = models.CharField(max_length=20, blank=True, default='')
     state = models.CharField(max_length=20, blank=True, default='')
+    state_code = models.IntegerField(choices=State_codes, default=CREATED)
     items_crawled = models.IntegerField(null=True)
     crawl_started_at = models.DateTimeField()
     crawl_ended_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def set_state(self, state_code):
+        self.state_code = state_code
+        self.state = [item[1] for item in self.State_codes if item[0] == state_code][0].lower()
 
     class Meta:
         db_table = 'wdf_dump'
@@ -69,6 +92,10 @@ class Price(models.Model):
         db_table = 'wdf_price'
         ordering = ['created_at']
 
+        constraints = [
+            models.UniqueConstraint(fields=['sku', 'version'], name='unique_price_version'),
+        ]
+
     def __str__(self):
         return f'Price #{self.pk}'
 
@@ -84,6 +111,10 @@ class Rating(models.Model):
         db_table = 'wdf_rating'
         ordering = ['created_at']
 
+        constraints = [
+            models.UniqueConstraint(fields=['sku', 'version'], name='unique_rating_version'),
+        ]
+
     def __str__(self):
         return f'Rating #{self.pk}'
 
@@ -98,6 +129,10 @@ class Sales(models.Model):
     class Meta:
         db_table = 'wdf_sales'
         ordering = ['created_at']
+
+        constraints = [
+            models.UniqueConstraint(fields=['sku', 'version'], name='unique_sales_version'),
+        ]
 
     def __str__(self):
         return f'Sales counter #{self.pk}'
@@ -115,6 +150,10 @@ class Position(models.Model):
     class Meta:
         db_table = 'wdf_position'
         ordering = ['created_at']
+
+        constraints = [
+            models.UniqueConstraint(fields=['sku', 'version', 'catalog'], name='unique_position_catalog_version'),
+        ]
 
     def __str__(self):
         return f'Position #{self.pk}'
@@ -145,6 +184,10 @@ class Reviews(models.Model):
         db_table = 'wdf_reviews'
         ordering = ['created_at']
 
+        constraints = [
+            models.UniqueConstraint(fields=['sku', 'version'], name='unique_reviews_version'),
+        ]
+
     def __str__(self):
         return f'Reviews counter #{self.pk}'
 
@@ -160,6 +203,10 @@ class Parameter(models.Model):
     class Meta:
         db_table = 'wdf_parameter'
         ordering = ['created_at']
+
+        constraints = [
+            models.UniqueConstraint(fields=['sku', 'version', 'parameter'], name='unique_parameter_version'),
+        ]
 
     def __str__(self):
         return f'Parameter #{self.pk}'
