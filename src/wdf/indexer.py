@@ -1,9 +1,8 @@
 import logging
+import pytz
 import re
 import time
 from datetime import datetime
-
-import pytz
 from dateutil.parser import parse as date_parse
 from django.conf import settings
 from scrapinghub import ScrapinghubClient

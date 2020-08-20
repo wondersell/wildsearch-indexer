@@ -1,5 +1,4 @@
 import logging
-
 from django.core.management.base import BaseCommand
 
 from wdf.indexer import Indexer

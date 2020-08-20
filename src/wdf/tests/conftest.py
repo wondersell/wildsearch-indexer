@@ -1,6 +1,5 @@
 import json
 import os
-
 import pytest
 import requests_mock
 from mixer.backend.django import mixer
