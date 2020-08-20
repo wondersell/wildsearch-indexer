@@ -1,6 +1,7 @@
 import logging
 import pytz
 import re
+import sys
 import time
 from datetime import datetime
 from dateutil.parser import parse as date_parse
@@ -103,10 +104,7 @@ class Indexer(object):
         for chunk in generator:
             start_time = time.time()
 
-            for item in chunk:
-                self.collect_all(item)
-
-            self.update_all_caches(self.catalogs, self.brands, self.parameters, self.skus)
+            self.process_chunk(dump, chunk, save_versions=False)
 
             time_spent = time.time() - start_time
 
@@ -123,10 +121,10 @@ class Indexer(object):
 
         return dump
 
-    def import_batch(self, job_id, start=0, count=None, chunk_size=500):
-        dump = self.get_or_save_dump(self.spider_slug, job_id)
-
+    def import_batch(self, job_id, start=0, count=sys.maxsize, chunk_size=500):
         generator = self.get_generator(job_id=job_id, start=start, count=count, chunk_size=chunk_size)
+
+        dump = self.get_or_save_dump(self.spider_slug, job_id)
 
         overall_start_time = time.time()
 
@@ -134,7 +132,7 @@ class Indexer(object):
         for chunk in generator:
             start_time = time.time()
 
-            self.process_chunk(dump, chunk)
+            self.process_chunk(dump, chunk, save_versions=True)
 
             time_spent = time.time() - start_time
 
@@ -144,11 +142,11 @@ class Indexer(object):
 
         overall_time_spent = time.time() - overall_start_time
 
-        logger.info(f'Batch imported in {overall_time_spent}s, {round(count / overall_time_spent * 60)} items/min')
+        logger.info(f'{dump} imported in {overall_time_spent}s, {round(count / overall_time_spent * 60)} items/min')
 
         return dump
 
-    def process_chunk(self, dump, chunk):
+    def process_chunk(self, dump, chunk, save_versions=False):
         # self.clear_collections()  # noqa: E800
 
         for item in chunk:
@@ -156,13 +154,14 @@ class Indexer(object):
 
         self.update_all_caches(self.catalogs, self.brands, self.parameters, self.skus)
 
-        # Записываем версии для каждого артикула
-        for item in chunk:
-            version = self.save_version(dump, item)
+        if save_versions:
+            # Записываем версии для каждого артикула
+            for item in chunk:
+                version = self.save_version(dump, item)
 
-            self.save_all(version, item)
+                self.save_all(version, item)
 
-    def get_generator(self, job_id, chunk_size=500, start=0, count=None):
+    def get_generator(self, job_id, chunk_size=500, start=0, count=sys.maxsize):
         return self.sh_client.get_job(job_id).items.list_iter(chunksize=chunk_size, start=start, count=count)
 
     def get_marketplace_model(self, spider_slug):

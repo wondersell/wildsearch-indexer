@@ -76,7 +76,7 @@ def dict_parameter_sample():
 
 @pytest.fixture()
 def _fill_db(indexer_filled_with_caches, items_sample, dump_sample):
-    indexer_filled_with_caches.process_chunk(dump_sample, items_sample)
+    indexer_filled_with_caches.process_chunk(dump_sample, items_sample, save_versions=True)
 
 
 @pytest.fixture(autouse=True)

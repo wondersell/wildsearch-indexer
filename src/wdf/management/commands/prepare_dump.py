@@ -5,7 +5,7 @@ from wdf.indexer import Indexer
 
 
 class Command(BaseCommand):
-    help = 'Adds specified job to data facility'  # noqa: VNE003
+    help = 'Prepares job for importing'  # noqa: VNE003
 
     def add_arguments(self, parser):
         parser.add_argument('job_id', type=str)
@@ -20,4 +20,4 @@ class Command(BaseCommand):
         logger.addHandler(console)
 
         indexer = Indexer()
-        indexer.process_job_end_to_end(job_id=options['job_id'], chunk_size=options['chunk_size'])
+        indexer.prepare_dump(job_id=options['job_id'], chunk_size=options['chunk_size'])
