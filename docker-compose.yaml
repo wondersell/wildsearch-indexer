@@ -1,0 +1,65 @@
+version: '3.6'
+
+services:
+  web:
+    build: ./src
+    restart: always
+    command: gunicorn app.wsgi
+    volumes:
+      - ./src:/srv:delegated
+      #- ../seller-stats/seller_stats:/usr/local/lib/python3.8/site-packages/seller-stats:delegated
+      #- ../seller-stats:/seller-stats:delegated
+    env_file:
+      - ./src/app/.env
+    links:
+      - database
+    ports:
+      - 80:8000
+    depends_on:
+      - worker
+      - database
+
+  worker:
+    build: ./src
+    restart: always
+    command: celery -A app worker
+    volumes:
+      - ./src:/srv:delegated
+      #- ../seller-stats/seller_stats:/usr/local/lib/python3.8/site-packages/seller-stats:delegated
+      #- ../seller-stats:/seller-stats:delegated
+    environment:
+      - C_FORCE_ROOT=on
+    env_file:
+      - ./src/app/.env
+    links:
+      - redis
+      - database
+    depends_on:
+      - redis
+      - database
+
+  flower:
+    build: ./src
+    restart: always
+    command: celery -A app flower --port=5555
+    volumes:
+      - ./src:/srv:delegated
+    links:
+      - redis
+    env_file:
+      - ./src/app/.env
+    ports:
+      - 5555:5555
+
+  redis:
+    image: redis:4-alpine
+
+  database:
+    image: postgres
+    env_file:
+      - ./src/app/.env
+    volumes:
+      - database-data:/var/lib/postgresql/data/ # persist data even if container shuts down
+
+volumes:
+  database-data: # named volumes can be managed easier using docker-compose

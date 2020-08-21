@@ -3,6 +3,7 @@ django-behaviors
 django-environ
 whitenoise
 celery==4.4.7
+flower==0.9.5
 requests==2.24.0
 python-dateutil==2.8.1
 gunicorn==20.0.4
