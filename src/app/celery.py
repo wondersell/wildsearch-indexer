@@ -14,7 +14,6 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')
 
 celery = Celery('app')
 
-# почему-то подключение из настроек джанги не заработало, нужно будет разобраться
 celery.config_from_object(settings)
 
 celery.autodiscover_tasks(lambda: settings.INSTALLED_APPS)  # noqa E800
