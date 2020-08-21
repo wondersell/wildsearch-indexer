@@ -161,8 +161,8 @@ HEALTH_CHECKS = {
 
 
 # Celery configs
-CELERY_BROKER_URL = env('REDIS_URL')
-BROKER_URL = env('REDIS_URL')  # but why?
+CELERY_BROKER_URL = BROKER_URL = env('REDIS_URL')  # but why?
+CELERY_BROKER_TRANSPORT_OPTIONS = BROKER_TRANSPORT_OPTIONS = {"max_retries": 3, "interval_start": 0, "interval_step": 0.2, "interval_max": 0.5}
 
 CELERY_RESULT_BACKEND = env('REDIS_URL')
 RESULT_BACKEND = env('REDIS_URL')
