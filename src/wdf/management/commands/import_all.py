@@ -25,5 +25,5 @@ class Command(BaseCommand):
 
         for job in client.get_project(settings.SH_PROJECT_ID).jobs.iter(has_tag=options['tags'].split(','), state=options['state']):
             job_id = job['key']
-            prepare_dump(job_id=job_id).delay()
+            prepare_dump.delay(job_id=job_id)
             self.stdout.write(self.style.SUCCESS(f'Job #{job_id} added to process queue'))

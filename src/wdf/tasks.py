@@ -36,7 +36,7 @@ def prepare_dump(job_id):
 
     logger.info(f'Dump for job {job_id} prepared, adding split task')
 
-    split_dump(dump_id=dump.id).delay()
+    split_dump.delay(dump_id=dump.id)
 
 
 @shared_task(
@@ -58,7 +58,7 @@ def split_dump(job_id):
     batch_size = round(dump.items_crawled / workers_per_batch)
 
     for mark in range(0, dump.items_crawled, batch_size):
-        import_dump_chunk(job_id, mark, batch_size).delay()
+        import_dump_chunk.delay(job_id, mark, batch_size)
 
         logger.info(f'Added chunk from {mark} to {mark+batch_size} for job {job_id}')
 
