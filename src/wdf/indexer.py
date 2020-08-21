@@ -1,6 +1,7 @@
 import logging
 import pytz
 import re
+import resource
 import sys
 import time
 from datetime import datetime
@@ -147,7 +148,8 @@ class Indexer(object):
         return dump
 
     def process_chunk(self, dump, chunk, save_versions=False):
-        # self.clear_collections()  # noqa: E800
+        if resource.getrusage(resource.RUSAGE_SELF).ru_maxrss > 512 / 6:
+            self.clear_collections()
 
         for item in chunk:
             self.collect_all(item)
