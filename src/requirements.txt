@@ -15,6 +15,7 @@ django-filter
 django-healthchecks
 
 scrapinghub==2.3.1
+msgpack==1.0.0
 
 redis
 sentry-sdk
