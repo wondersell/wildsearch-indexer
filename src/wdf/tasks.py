@@ -15,60 +15,24 @@ logger.setLevel(logging.INFO)
         'countdown': 5,
     },
 )
-def import_version(job_id):
-    indexer = Indexer()
-    indexer.process_job_end_to_end(job_id=job_id)
-
-
-@shared_task(
-    autoretry_for=[RequestException],
-    retry_kwargs={
-        'max_retries': 10,
-        'countdown': 5,
-    },
-)
 def prepare_dump(job_id):
     logger.info(f'Preparing dump for job {job_id}')
 
-    indexer = Indexer()
+    indexer = Indexer(get_chunk_size=5000, save_chunk_size=5000)
 
-    dump = indexer.prepare_dump(job_id=job_id)
+    indexer.prepare_dump(job_id=job_id)
 
-    logger.info(f'Dump for job {job_id} prepared, adding split task')
+    logger.info(f'Dump for job {job_id} prepared, adding import task')
 
-    split_dump.delay(dump_id=dump.id)
-
-
-@shared_task(
-    autoretry_for=[RequestException],
-    retry_kwargs={
-        'max_retries': 10,
-        'countdown': 5,
-    },
-)
-def split_dump(job_id):
-    logger.info(f'Splitting dump for job {job_id}')
-
-    indexer = Indexer()
-
-    dump = indexer.get_or_save_dump('wb', job_id)
-
-    workers_per_batch = 5
-
-    batch_size = round(dump.items_crawled / workers_per_batch)
-
-    for mark in range(0, dump.items_crawled, batch_size):
-        import_dump_chunk.delay(job_id, mark, batch_size)
-
-        logger.info(f'Added chunk from {mark} to {mark+batch_size} for job {job_id}')
-
-    logger.info(f'Dump for job {job_id} splitted')
+    import_dump.delay(job_id=job_id)
 
 
 @shared_task()
-def import_dump_chunk(job_id, start, count):
-    logger.info(f'Importing chunk from {start} to {start+count} for job {job_id}')
+def import_dump(job_id):
+    logger.info(f'Importing dump for job {job_id}')
 
-    indexer = Indexer()
+    indexer = Indexer(get_chunk_size=1000, save_chunk_size=1000)
 
-    indexer.import_batch(job_id, start, count)
+    indexer.import_dump(job_id=job_id)
+
+    logger.info(f'Dump for job {job_id} imported')
