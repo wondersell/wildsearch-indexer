@@ -218,13 +218,17 @@ class Parameter(models.Model):
 class DictMarketplace(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
     name = models.CharField(max_length=255)
-    slug = models.SlugField()
+    slug = models.SlugField(unique=True)
     url = models.URLField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'wdf_dict_marketplace'
         ordering = ['created_at']
+
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'slug'], name='unique_marketplace_name_slug'),
+        ]
 
     def __str__(self):
         return f'Marketplace dictionary item #{self.pk}'
