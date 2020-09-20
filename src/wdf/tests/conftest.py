@@ -40,10 +40,10 @@ def indexer_filled(indexer, items_sample):
 @pytest.fixture()
 def indexer_filled_with_caches(indexer_filled):
     indexer_filled.update_all_caches(
-        indexer_filled.catalogs,
-        indexer_filled.brands,
-        indexer_filled.parameters,
-        indexer_filled.skus,
+        indexer_filled.catalogs_retrieved,
+        indexer_filled.brands_retrieved,
+        indexer_filled.parameters_retrieved,
+        indexer_filled.skus_retrieved,
     )
 
     return indexer_filled
@@ -76,7 +76,7 @@ def dict_parameter_sample():
 
 @pytest.fixture()
 def _fill_db(indexer_filled_with_caches, items_sample, dump_sample):
-    indexer_filled_with_caches.process_chunk(dump_sample, items_sample, save_versions=True)
+    indexer_filled_with_caches.process_batch([items_sample], dump_sample, save_versions=True)
 
 
 @pytest.fixture(autouse=True)

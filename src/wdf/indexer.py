@@ -4,8 +4,10 @@ import re
 import resource
 import sys
 import time
+from collections import defaultdict
 from datetime import datetime
 from dateutil.parser import parse as date_parse
+from django.apps import apps
 from django.conf import settings
 from scrapinghub import ScrapinghubClient
 
@@ -76,21 +78,22 @@ class Indexer(object):
        в этом случае никакого rc не должно быть
     """
 
-    def __init__(self):
+    def __init__(self, save_chunk_size=100):
         self.spider_slug = 'wb'
 
         self.marketplace_model = self.get_marketplace_model(self.spider_slug)
         self.sh_client = ScrapinghubClient(settings.SH_APIKEY)
+        self.bulk_manager = BulkCreateManager(chunk_size=save_chunk_size)
 
-        self.catalog_cache = {}
-        self.brand_cache = {}
-        self.sku_cache = {}
-        self.parameter_cache = {}
+        self.catalogs_cache = {}
+        self.brands_cache = {}
+        self.skus_cache = {}
+        self.parameters_cache = {}
 
-        self.catalogs = {}
-        self.brands = {}
-        self.skus = {}
-        self.parameters = {}
+        self.catalogs_retrieved = {}
+        self.brands_retrieved = {}
+        self.skus_retrieved = {}
+        self.parameters_retrieved = {}
 
     def prepare_dump(self, job_id, chunk_size=500):
         generator = self.get_generator(job_id=job_id, chunk_size=chunk_size)
@@ -99,69 +102,71 @@ class Indexer(object):
         dump.set_state(Dump.PREPARING)
         dump.save()
 
-        overall_start_time = time.time()
-
-        chunk_no = 1
-        for chunk in generator:
-            start_time = time.time()
-
-            self.process_chunk(dump, chunk, save_versions=False)
-
-            time_spent = time.time() - start_time
-
-            logger.info(f'Chunk #{chunk_no} prepared in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min')
-
-            chunk_no += 1
+        self.process_batch(generator=generator, dump=dump, save_versions=False)
 
         dump.set_state(Dump.PREPARED)
         dump.save()
 
-        overall_time_spent = time.time() - overall_start_time
+        return self
 
-        logger.info(f'{dump} prepared in {overall_time_spent}s, {round(dump.items_crawled / overall_time_spent * 60)} items/min')
-
-        return dump
-
-    def import_batch(self, job_id, start=0, count=sys.maxsize, chunk_size=500):
+    def import_dump(self, job_id, start=0, count=sys.maxsize, chunk_size=500):
         generator = self.get_generator(job_id=job_id, start=start, count=count, chunk_size=chunk_size)
 
         dump = self.get_or_save_dump(self.spider_slug, job_id)
 
+        self.process_batch(generator=generator, dump=dump, save_versions=True)
+
+        return self
+
+    def process_batch(self, generator, dump, save_versions=False):
         overall_start_time = time.time()
 
         chunk_no = 1
+        items_count = 0
+
         for chunk in generator:
-            start_time = time.time()
+            try:
+                start_time = time.time()
+                mem_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024  # в мегабайтах
+                max_mem_usage = 512 / 6  # на самом деле делить нужно на количество потоков
 
-            self.process_chunk(dump, chunk, save_versions=True)
+                if mem_usage > max_mem_usage:
+                    logger.info(f'Memory usage high ({mem_usage} of {max_mem_usage} MB), clearing caches')
 
-            time_spent = time.time() - start_time
+                    self.clear_collections()
 
-            logger.info(f'Chunk #{chunk_no} imported in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min')
+                for item in chunk:
+                    self.collect_all(item)
 
-            chunk_no += 1
+                    items_count += 1
+
+                self.update_all_caches(self.catalogs_retrieved, self.brands_retrieved, self.parameters_retrieved, self.skus_retrieved)
+
+                if save_versions:
+                    # Записываем версии для каждого артикула
+                    for item in chunk:
+                        version = self.save_version(dump, item)
+
+                        self.save_all(version, item)
+
+                time_spent = time.time() - start_time
+
+                logger.info(f'Chunk #{chunk_no} processed in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min, used {round(mem_usage, 2)}MB')
+
+                chunk_no += 1
+            except KeyboardInterrupt:
+                # В основном для отладки через систему команд Django
+                overall_time_spent = time.time() - overall_start_time
+
+                logger.info(f'{dump} processed in {overall_time_spent}s, {round(items_count / overall_time_spent * 60)} items/min')
+
+                raise SystemExit(0)
 
         overall_time_spent = time.time() - overall_start_time
 
-        logger.info(f'{dump} imported in {overall_time_spent}s, {round(count / overall_time_spent * 60)} items/min')
+        logger.info(f'{dump} processed in {overall_time_spent}s, {round(items_count / overall_time_spent * 60)} items/min')
 
-        return dump
-
-    def process_chunk(self, dump, chunk, save_versions=False):
-        if resource.getrusage(resource.RUSAGE_SELF).ru_maxrss > 512 / 6:
-            self.clear_collections()
-
-        for item in chunk:
-            self.collect_all(item)
-
-        self.update_all_caches(self.catalogs, self.brands, self.parameters, self.skus)
-
-        if save_versions:
-            # Записываем версии для каждого артикула
-            for item in chunk:
-                version = self.save_version(dump, item)
-
-                self.save_all(version, item)
+        return self
 
     def get_generator(self, job_id, chunk_size=500, start=0, count=sys.maxsize):
         return self.sh_client.get_job(job_id).items.list_iter(chunksize=chunk_size, start=start, count=count)
@@ -206,7 +211,7 @@ class Indexer(object):
     def save_version(self, dump, item):
         version = Version(
             dump=dump,
-            sku_id=self.sku_cache[item['wb_id']],
+            sku_id=self.skus_cache[item['wb_id']],
             crawled_at=pytz.utc.localize(date_parse(item['parse_date'])),
         )
 
@@ -217,9 +222,9 @@ class Indexer(object):
     def save_position(self, version, item):
         if 'wb_category_position' in item.keys():
             position = Position(
-                sku_id=self.sku_cache[item['wb_id']],
+                sku_id=self.skus_cache[item['wb_id']],
                 version=version,
-                catalog_id=self.catalog_cache[item['wb_category_url']],
+                catalog_id=self.catalogs_cache[item['wb_category_url']],
                 absolute=item['wb_category_position'],
             )
 
@@ -230,7 +235,7 @@ class Indexer(object):
     def save_price(self, version, item):
         if 'wb_price' in item.keys():
             price = Price(
-                sku_id=self.sku_cache[item['wb_id']],
+                sku_id=self.skus_cache[item['wb_id']],
                 version=version,
                 price=float(item['wb_price']),
             )
@@ -242,7 +247,7 @@ class Indexer(object):
     def save_rating(self, version, item):
         if 'wb_rating' in item.keys():
             rating = Rating(
-                sku_id=self.sku_cache[item['wb_id']],
+                sku_id=self.skus_cache[item['wb_id']],
                 version=version,
                 rating=item['wb_rating'],
             )
@@ -254,7 +259,7 @@ class Indexer(object):
     def save_sales(self, version, item):
         if 'wb_purchases_count' in item.keys():
             sales = Sales(
-                sku_id=self.sku_cache[item['wb_id']],
+                sku_id=self.skus_cache[item['wb_id']],
                 version=version,
                 sales=item['wb_purchases_count'],
             )
@@ -266,7 +271,7 @@ class Indexer(object):
     def save_reviews(self, version, item):
         if 'wb_reviews_count' in item.keys():
             reviews = Reviews(
-                sku_id=self.sku_cache[item['wb_id']],
+                sku_id=self.skus_cache[item['wb_id']],
                 version=version,
                 reviews=item['wb_reviews_count'],
             )
@@ -281,9 +286,9 @@ class Indexer(object):
 
             for feature_name, feature_value in item['features'][0].items():
                 parameter = Parameter(
-                    sku_id=self.sku_cache[item['wb_id']],
+                    sku_id=self.skus_cache[item['wb_id']],
                     version=version,
-                    parameter_id=self.parameter_cache[feature_name],
+                    parameter_id=self.parameters_cache[feature_name],
                     value=feature_value,
                 )
 
@@ -294,10 +299,10 @@ class Indexer(object):
             return parameters
 
     def clear_collections(self):
-        self.catalogs = {}
-        self.brands = {}
-        self.parameters = {}
-        self.skus = {}
+        self.catalogs_retrieved = {}
+        self.brands_retrieved = {}
+        self.parameters_retrieved = {}
+        self.skus_retrieved = {}
 
     def collect_all(self, item):
         self.collect_wb_catalogs(item)
@@ -307,7 +312,7 @@ class Indexer(object):
 
     def collect_wb_catalogs(self, item):
         if 'wb_category_url' in item.keys():
-            self.catalogs[item['wb_category_url']] = {
+            self.catalogs_retrieved[item['wb_category_url']] = {
                 'marketplace': self.marketplace_model.id,
                 'parent': '',
                 'name': item['wb_category_name'] if 'wb_category_name' in item.keys() else None,
@@ -317,7 +322,7 @@ class Indexer(object):
 
     def collect_wb_brands(self, item):
         if 'wb_brand_url' in item.keys():
-            self.brands[item['wb_brand_url']] = {
+            self.brands_retrieved[item['wb_brand_url']] = {
                 'marketplace': self.marketplace_model.id,
                 'name': item['wb_brand_name'] if 'wb_brand_name' in item.keys() else None,
                 'url': item['wb_brand_url'] if 'wb_brand_url' in item.keys() else None,
@@ -326,13 +331,13 @@ class Indexer(object):
     def collect_wb_parameters(self, item):
         if 'features' in item.keys():
             for feature_name, _feature_value in item['features'][0].items():
-                self.parameters[feature_name] = {
+                self.parameters_retrieved[feature_name] = {
                     'marketplace': self.marketplace_model.id,
                     'name': feature_name,
                 }
 
     def collect_wb_skus(self, item):
-        self.skus[item['wb_id']] = {
+        self.skus_retrieved[item['wb_id']] = {
             'parse_date': item['parse_date'],
             'marketplace': self.marketplace_model.id,
             'brand': item['wb_brand_url'] if 'wb_brand_url' in item.keys() else None,
@@ -347,74 +352,138 @@ class Indexer(object):
         self.update_parameters_cache(parameters)
         self.update_sku_cache(skus)
 
-    def filter_items_not_found(self, retrieved, cache_attr_name, model, cache_key):
+    # Обновление горячего кеша объектов в памяти данными, которые есть в БД
+    def update_caches_from_db(self, object_name, model, cache_key):
+        retrieved_attr_name = object_name + '_retrieved'
+        cached_attr_name = object_name + '_cache'
+
+        retrieved = getattr(self, retrieved_attr_name)
+        cached = getattr(self, cached_attr_name)
+
         # по этому фильтру будем искать в бд
         filter_key = cache_key + '__in'
 
-        # смотрим каких записей нет в горячем кешк в памяти
-        items_to_retrieve = set(retrieved.keys()).difference(set(getattr(self, cache_attr_name).keys()))
+        # смотрим каких записей нет в горячем кеше в памяти
+        items_to_retrieve = set(retrieved.keys()).difference(set(cached.keys()))
 
         # пытаемся найти их в бд
         items_retrieved = model.objects.filter(**{filter_key: items_to_retrieve})
 
         # сохраняем найденное в память
-        setattr(self, cache_attr_name, {**getattr(self, cache_attr_name), **dict([(getattr(item, cache_key), item.id) for item in items_retrieved])})
+        setattr(self, cached_attr_name, {**getattr(self, cached_attr_name),
+                                         **dict([(getattr(item, cache_key), item.id) for item in items_retrieved])})
+
+    # Поиск несуществующих в кеше объектов
+    def filter_items_not_found(self, object_name, model, cache_key):
+        retrieved = getattr(self, object_name + '_retrieved')
+        cached = getattr(self, object_name + '_cache')
 
         # разница между кешем и тем, что нужно было найти – ненайденные записи
-        return set(retrieved.keys()).difference(set(getattr(self, cache_attr_name).keys()))
+        return set(retrieved.keys()).difference(set(cached.keys()))
 
     def update_catalogs_cache(self, retrieved):
-        for catalog_url in self.filter_items_not_found(self.catalogs, 'catalog_cache', DictCatalog, 'url'):
-            new_model = DictCatalog(
+        self.update_caches_from_db('catalogs', DictCatalog, 'url')
+
+        for catalog_url in self.filter_items_not_found('catalogs', DictCatalog, 'url'):
+            self.bulk_manager.add(DictCatalog(
                 marketplace_id=retrieved[catalog_url]['marketplace'],
                 parent_id=retrieved[catalog_url]['parent'],
                 name=retrieved[catalog_url]['name'],
                 url=retrieved[catalog_url]['url'],
                 level=retrieved[catalog_url]['level'],
-            )
+            ))
 
-            new_model.save()
+        self.bulk_manager.done()
 
-            self.catalog_cache[catalog_url] = new_model.id
+        self.update_caches_from_db('catalogs', DictCatalog, 'url')
 
     def update_brands_cache(self, retrieved):
-        for brand_url in self.filter_items_not_found(self.brands, 'brand_cache', DictBrand, 'url'):
-            new_model = DictBrand(
+        self.update_caches_from_db('brands', DictBrand, 'url')
+
+        for brand_url in self.filter_items_not_found('brands', DictBrand, 'url'):
+            self.bulk_manager.add(DictBrand(
                 marketplace_id=retrieved[brand_url]['marketplace'],
                 name=retrieved[brand_url]['name'],
                 url=retrieved[brand_url]['url'],
-            )
+            ))
 
-            new_model.save()
+        self.bulk_manager.done()
 
-            self.brand_cache[brand_url] = new_model.id
+        self.update_caches_from_db('brands', DictBrand, 'url')
 
     def update_parameters_cache(self, retrieved):
-        for parameter_name in self.filter_items_not_found(self.parameters, 'parameter_cache', DictParameter, 'name'):
-            new_model = DictParameter(
+        self.update_caches_from_db('parameters', DictParameter, 'name')
+
+        for parameter_name in self.filter_items_not_found('parameters', DictParameter, 'name'):
+            self.bulk_manager.add(DictParameter(
                 marketplace_id=retrieved[parameter_name]['marketplace'],
                 name=parameter_name,
-            )
+            ))
 
-            new_model.save()
+        self.bulk_manager.done()
 
-            self.parameter_cache[parameter_name] = new_model.id
+        self.update_caches_from_db('parameters', DictParameter, 'name')
 
     def update_sku_cache(self, retrieved):
-        for sku_article in self.filter_items_not_found(self.skus, 'sku_cache', Sku, 'article'):
-            new_model = Sku(
+        self.update_caches_from_db('skus', Sku, 'article')
+
+        for sku_article in self.filter_items_not_found('skus', Sku, 'article'):
+            if len(self.brands_cache.keys()) > 0 and retrieved[sku_article]['brand'] is not None:
+                brand_id = self.brands_cache[retrieved[sku_article]['brand']]
+            else:
+                brand_id = None
+
+            self.bulk_manager.add(Sku(
                 marketplace_id=retrieved[sku_article]['marketplace'],
                 article=retrieved[sku_article]['article'],
                 url=retrieved[sku_article]['url'],
                 title=retrieved[sku_article]['title'],
-            )
+                brand_id=brand_id,
+            ))
 
-            if len(self.brand_cache.keys()) > 0 and retrieved[sku_article]['brand'] is not None:
-                new_model.brand_id = self.brand_cache[retrieved[sku_article]['brand']]
+        self.bulk_manager.done()
 
-            new_model.save()
+        self.update_caches_from_db('skus', Sku, 'article')
 
-            self.sku_cache[sku_article] = new_model.id
+
+class BulkCreateManager(object):
+    """
+    This helper class keeps track of ORM objects to be created for multiple
+    model classes, and automatically creates those objects with `bulk_create`
+    when the number of objects accumulated for a given model class exceeds
+    `chunk_size`.
+    Upon completion of the loop that's `add()`ing objects, the developer must
+    call `done()` to ensure the final set of objects is created for all models.
+    """
+
+    def __init__(self, chunk_size=100):
+        self._create_queues = defaultdict(list)
+        self.chunk_size = chunk_size
+
+    def _commit(self, model_class):
+        model_key = model_class._meta.label
+        model_class.objects.bulk_create(self._create_queues[model_key])
+        self._create_queues[model_key] = []
+
+    def add(self, obj):
+        """
+        Add an object to the queue to be created, and call bulk_create if we
+        have enough objs.
+        """
+        model_class = type(obj)
+        model_key = model_class._meta.label
+        self._create_queues[model_key].append(obj)
+        if len(self._create_queues[model_key]) >= self.chunk_size:
+            self._commit(model_class)
+
+    def done(self):
+        """
+        Always call this upon completion to make sure the final partial chunk
+        is saved.
+        """
+        for model_name, objects in self._create_queues.items():
+            if len(objects) > 0:
+                self._commit(apps.get_model(model_name))
 
 
 def guess_wb_article(item):

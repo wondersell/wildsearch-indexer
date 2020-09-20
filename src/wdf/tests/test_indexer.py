@@ -17,9 +17,9 @@ def test_indexer_init(indexer):
 def test_collect_wb_catalogs_correct(indexer, item_sample):
     indexer.collect_wb_catalogs(item_sample)
 
-    collected = indexer.catalogs['https://www.wildberries.ru/promotions/dlya-pitomtsev/kovriki-dlya-lotkov']
+    collected = indexer.catalogs_retrieved['https://www.wildberries.ru/promotions/dlya-pitomtsev/kovriki-dlya-lotkov']
 
-    assert len(indexer.catalogs) == 1
+    assert len(indexer.catalogs_retrieved) == 1
     assert list(collected) == ['marketplace', 'parent', 'name', 'url', 'level']
     assert collected['parent'] == ''
     assert collected['name'] == 'Коврики для лотков'
@@ -33,16 +33,16 @@ def test_collect_wb_catalogs_empty_category(indexer, item_sample):
 
     indexer.collect_wb_catalogs(item_sample)
 
-    assert len(indexer.catalogs) == 0
+    assert len(indexer.catalogs_retrieved) == 0
 
 
 @pytest.mark.django_db
 def test_collect_wb_brands_correct(indexer, item_sample):
     indexer.collect_wb_brands(item_sample)
 
-    collected = indexer.brands['https://www.wildberries.ru/brands/vita-famoso']
+    collected = indexer.brands_retrieved['https://www.wildberries.ru/brands/vita-famoso']
 
-    assert len(indexer.brands) == 1
+    assert len(indexer.brands_retrieved) == 1
     assert list(collected) == ['marketplace', 'name', 'url']
     assert collected['name'] == 'Vita Famoso'
     assert collected['url'] == 'https://www.wildberries.ru/brands/vita-famoso'
@@ -54,16 +54,16 @@ def test_collect_wb_brands_empty(indexer, item_sample):
 
     indexer.collect_wb_brands(item_sample)
 
-    assert len(indexer.brands) == 0
+    assert len(indexer.brands_retrieved) == 0
 
 
 @pytest.mark.django_db
 def test_collect_wb_skus_correct(indexer, item_sample):
     indexer.collect_wb_skus(item_sample)
 
-    collected = indexer.skus['11743005']
+    collected = indexer.skus_retrieved['11743005']
 
-    assert len(indexer.skus) == 1
+    assert len(indexer.skus_retrieved) == 1
     assert list(collected) == ['parse_date', 'marketplace', 'brand', 'article', 'url', 'title']
     assert collected['parse_date'] == '2020-08-10 18:12:07.478756'
     assert collected['brand'] == 'https://www.wildberries.ru/brands/vita-famoso'
@@ -76,18 +76,18 @@ def test_collect_wb_skus_correct(indexer, item_sample):
 def test_collect_parameters_correct(indexer, item_sample):
     indexer.collect_wb_parameters(item_sample)
 
-    assert len(indexer.parameters) == 10
-    assert list(indexer.parameters.keys()) == ['Вид животного', 'Материал изделия', 'Вес с упаковкой (кг)', 'Ширина предмета', 'Длина предмета', 'Ширина упаковки', 'Длина упаковки', 'Комплектация', 'Страна бренда', 'Страна производитель']
+    assert len(indexer.parameters_retrieved) == 10
+    assert list(indexer.parameters_retrieved.keys()) == ['Вид животного', 'Материал изделия', 'Вес с упаковкой (кг)', 'Ширина предмета', 'Длина предмета', 'Ширина упаковки', 'Длина упаковки', 'Комплектация', 'Страна бренда', 'Страна производитель']
 
 
 @pytest.mark.django_db
 def test_collect_all(indexer, item_sample):
     indexer.collect_all(item_sample)
 
-    assert len(indexer.skus) == 1
-    assert len(indexer.brands) == 1
-    assert len(indexer.catalogs) == 1
-    assert len(indexer.parameters) == 10
+    assert len(indexer.skus_retrieved) == 1
+    assert len(indexer.brands_retrieved) == 1
+    assert len(indexer.catalogs_retrieved) == 1
+    assert len(indexer.parameters_retrieved) == 10
 
 
 @pytest.mark.django_db
@@ -95,10 +95,10 @@ def test_clear_collections(indexer, item_sample):
     indexer.collect_all(item_sample)
     indexer.clear_collections()
 
-    assert len(indexer.skus) == 0
-    assert len(indexer.brands) == 0
-    assert len(indexer.catalogs) == 0
-    assert len(indexer.parameters) == 0
+    assert len(indexer.skus_retrieved) == 0
+    assert len(indexer.brands_retrieved) == 0
+    assert len(indexer.catalogs_retrieved) == 0
+    assert len(indexer.parameters_retrieved) == 0
 
 
 @pytest.mark.django_db
@@ -106,7 +106,7 @@ def test_filter_items_not_found_empty_cache(indexer, items_sample):
     for item in items_sample:
         indexer.collect_all(item)
 
-    not_found = indexer.filter_items_not_found(indexer.skus, 'sku_cache', Sku, 'article')
+    not_found = indexer.filter_items_not_found('skus', Sku, 'article')
 
     assert len(not_found) == 26
     assert '11743005' in not_found
@@ -116,7 +116,9 @@ def test_filter_items_not_found_empty_cache(indexer, items_sample):
 def test_filter_items_not_found_filled_cache(indexer_filled, items_sample):
     mixer.cycle(6).blend(Sku, article=(_ for _ in ('11743005', '12381016', '13168135', '13194636', '12325577', '11784593')))
 
-    not_found = indexer_filled.filter_items_not_found(indexer_filled.skus, 'sku_cache', Sku, 'article')
+    indexer_filled.update_caches_from_db('skus', Sku, 'article')
+
+    not_found = indexer_filled.filter_items_not_found('skus', Sku, 'article')
 
     assert len(not_found) == 20  # из 26
 
@@ -125,9 +127,9 @@ def test_filter_items_not_found_filled_cache(indexer_filled, items_sample):
 def test_update_catalogs_cache_empty_cache(indexer, item_sample):
     indexer.collect_all(item_sample)
 
-    indexer.update_catalogs_cache(indexer.catalogs)
+    indexer.update_catalogs_cache(indexer.catalogs_retrieved)
 
-    assert len(indexer.catalog_cache) == 1
+    assert len(indexer.catalogs_cache) == 1
 
 
 @pytest.mark.django_db
@@ -136,9 +138,9 @@ def test_update_catalogs_cache_filled_cache_with_object(indexer, item_sample):
 
     mixer.blend(DictCatalog, url='https://www.wildberries.ru/catalog/yuvelirnye-ukrasheniya/koltsa/pechatki')
 
-    indexer.update_catalogs_cache(indexer.catalogs)
+    indexer.update_catalogs_cache(indexer.catalogs_retrieved)
 
-    assert len(indexer.catalog_cache) == 1
+    assert len(indexer.catalogs_cache) == 1
 
 
 @pytest.mark.django_db
@@ -146,48 +148,48 @@ def test_update_catalogs_cache_filled_cache_without_object(indexer, item_sample)
     indexer.collect_all(item_sample)
     mixer.blend(DictCatalog)
 
-    indexer.update_catalogs_cache(indexer.catalogs)
+    indexer.update_catalogs_cache(indexer.catalogs_retrieved)
 
-    assert len(indexer.catalog_cache) == 1
+    assert len(indexer.catalogs_cache) == 1
 
 
 @pytest.mark.django_db
 def test_update_brands_cache_empty_cache(indexer_filled):
-    indexer_filled.update_brands_cache(indexer_filled.brands)
+    indexer_filled.update_brands_cache(indexer_filled.brands_retrieved)
 
-    assert len(indexer_filled.brand_cache) == 9
+    assert len(indexer_filled.brands_cache) == 9
 
 
 @pytest.mark.django_db
 def test_update_parameters_cache_empty_cache(indexer_filled):
-    indexer_filled.update_parameters_cache(indexer_filled.parameters)
+    indexer_filled.update_parameters_cache(indexer_filled.parameters_retrieved)
 
-    assert len(indexer_filled.parameter_cache) == 16
+    assert len(indexer_filled.parameters_cache) == 16
 
 
 @pytest.mark.django_db
 def test_update_sku_cache_empty_cache(indexer_filled):
-    indexer_filled.update_brands_cache(indexer_filled.brands)
-    indexer_filled.update_sku_cache(indexer_filled.skus)
+    indexer_filled.update_brands_cache(indexer_filled.brands_retrieved)
+    indexer_filled.update_sku_cache(indexer_filled.skus_retrieved)
 
-    assert len(indexer_filled.sku_cache) == 26
+    assert len(indexer_filled.skus_cache) == 26
 
 
 @pytest.mark.django_db
 def test_update_sku_cache_without_brands(indexer_filled):
-    indexer_filled.update_sku_cache(indexer_filled.skus)
+    indexer_filled.update_sku_cache(indexer_filled.skus_retrieved)
 
-    assert len(indexer_filled.sku_cache) == 26
+    assert len(indexer_filled.skus_cache) == 26
 
 
 @pytest.mark.django_db
 def test_update_all_caches(indexer_filled):
-    indexer_filled.update_all_caches(indexer_filled.catalogs, indexer_filled.brands, indexer_filled.parameters, indexer_filled.skus)
+    indexer_filled.update_all_caches(indexer_filled.catalogs_retrieved, indexer_filled.brands_retrieved, indexer_filled.parameters_retrieved, indexer_filled.skus_retrieved)
 
-    assert len(indexer_filled.catalog_cache) == 1
-    assert len(indexer_filled.brand_cache) == 9
-    assert len(indexer_filled.parameter_cache) == 16
-    assert len(indexer_filled.sku_cache) == 26
+    assert len(indexer_filled.catalogs_cache) == 1
+    assert len(indexer_filled.brands_cache) == 9
+    assert len(indexer_filled.parameters_cache) == 16
+    assert len(indexer_filled.skus_cache) == 26
 
 
 @pytest.mark.django_db
