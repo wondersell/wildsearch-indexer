@@ -130,12 +130,6 @@ class Indexer(object):
             try:
                 start_time = time.time()
                 mem_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024  # в мегабайтах
-                # max_mem_usage = 512 / 6  # на самом деле делить нужно на количество потоков
-
-                # if mem_usage > max_mem_usage:
-                #     logger.info(f'Memory usage high ({mem_usage} of {max_mem_usage} MB), clearing caches')
-                #
-                #     self.clear_retrieved()
 
                 self.clear_retrieved()
                 self.clear_caches()
