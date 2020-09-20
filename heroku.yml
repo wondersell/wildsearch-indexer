@@ -4,6 +4,10 @@ setup:
 build:
   docker:
     indexer: src/Dockerfile_heroku
+release:
+  command:
+    - python3 manage.py migrate
+  image: indexer
 run:
   web:
     command:
