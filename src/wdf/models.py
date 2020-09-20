@@ -74,6 +74,10 @@ class Sku(models.Model):
         db_table = 'wdf_sku'
         ordering = ['created_at']
 
+        indexes = [
+            models.Index(fields=['article']),
+        ]
+
     def __str__(self):
         return f'Sku #{self.pk}'
 
@@ -237,6 +241,10 @@ class DictBrand(models.Model):
         db_table = 'wdf_dict_brand'
         ordering = ['created_at']
 
+        indexes = [
+            models.Index(fields=['url']),
+        ]
+
     def __str__(self):
         return f'Brand dictionary item #{self.pk}'
 
@@ -269,6 +277,10 @@ class DictCatalog(models.Model):
         db_table = 'wdf_dict_catalog'
         ordering = ['created_at']
 
+        indexes = [
+            models.Index(fields=['url']),
+        ]
+
     def __str__(self):
         return f'Catalog dictionary #{self.pk}'
 
@@ -282,6 +294,10 @@ class DictParameter(models.Model):
     class Meta:
         db_table = 'wdf_dict_parameter'
         ordering = ['created_at']
+
+        indexes = [
+            models.Index(fields=['name']),
+        ]
 
     def __str__(self):
         return f'Parameter dictionary #{self.pk}'
