@@ -91,9 +91,9 @@ def test_collect_all(indexer, item_sample):
 
 
 @pytest.mark.django_db
-def test_clear_collections(indexer, item_sample):
+def test_clear_retrieved(indexer, item_sample):
     indexer.collect_all(item_sample)
-    indexer.clear_collections()
+    indexer.clear_retrieved()
 
     assert len(indexer.skus_retrieved) == 0
     assert len(indexer.brands_retrieved) == 0
@@ -196,6 +196,8 @@ def test_update_all_caches(indexer_filled):
 def test_save_version(indexer_filled_with_caches, dump_sample, item_sample):
     indexer_filled_with_caches.save_version(dump_sample, item_sample)
 
+    indexer_filled_with_caches.bulk_manager.done()
+
     assert len(Version.objects.all()) == 1
 
     obj = Version.objects.first()
@@ -207,6 +209,8 @@ def test_save_version(indexer_filled_with_caches, dump_sample, item_sample):
 @pytest.mark.django_db
 def test_save_position(indexer_filled_with_caches, item_sample, version_sample):
     indexer_filled_with_caches.save_position(version_sample, item_sample)
+
+    indexer_filled_with_caches.bulk_manager.done()
 
     assert len(Position.objects.all()) == 1
 
@@ -222,12 +226,16 @@ def test_save_position_empty(indexer_filled_with_caches, item_sample, version_sa
 
     indexer_filled_with_caches.save_position(version_sample, item_sample)
 
+    indexer_filled_with_caches.bulk_manager.done()
+
     assert len(Position.objects.all()) == 0
 
 
 @pytest.mark.django_db
 def test_save_price(indexer_filled_with_caches, item_sample, version_sample):
     indexer_filled_with_caches.save_price(version_sample, item_sample)
+
+    indexer_filled_with_caches.bulk_manager.done()
 
     assert len(Price.objects.all()) == 1
 
@@ -243,12 +251,16 @@ def test_save_price_empty(indexer_filled_with_caches, item_sample, version_sampl
 
     indexer_filled_with_caches.save_price(version_sample, item_sample)
 
+    indexer_filled_with_caches.bulk_manager.done()
+
     assert len(Price.objects.all()) == 0
 
 
 @pytest.mark.django_db
 def test_save_rating(indexer_filled_with_caches, item_sample, version_sample):
     indexer_filled_with_caches.save_rating(version_sample, item_sample)
+
+    indexer_filled_with_caches.bulk_manager.done()
 
     assert len(Rating.objects.all()) == 1
 
@@ -264,12 +276,16 @@ def test_save_rating_empty(indexer_filled_with_caches, item_sample, version_samp
 
     indexer_filled_with_caches.save_rating(version_sample, item_sample)
 
+    indexer_filled_with_caches.bulk_manager.done()
+
     assert len(Rating.objects.all()) == 0
 
 
 @pytest.mark.django_db
 def test_save_sales(indexer_filled_with_caches, item_sample, version_sample):
     indexer_filled_with_caches.save_sales(version_sample, item_sample)
+
+    indexer_filled_with_caches.bulk_manager.done()
 
     assert len(Sales.objects.all()) == 1
 
@@ -285,12 +301,16 @@ def test_save_sales_empty(indexer_filled_with_caches, item_sample, version_sampl
 
     indexer_filled_with_caches.save_sales(version_sample, item_sample)
 
+    indexer_filled_with_caches.bulk_manager.done()
+
     assert len(Sales.objects.all()) == 0
 
 
 @pytest.mark.django_db
 def test_save_reviews(indexer_filled_with_caches, item_sample, version_sample):
     indexer_filled_with_caches.save_reviews(version_sample, item_sample)
+
+    indexer_filled_with_caches.bulk_manager.done()
 
     assert len(Reviews.objects.all()) == 1
 
@@ -313,6 +333,8 @@ def test_save_reviews_empty(indexer_filled_with_caches, item_sample, version_sam
 def test_save_parameters(indexer_filled_with_caches, item_sample, version_sample):
     indexer_filled_with_caches.save_parameters(version_sample, item_sample)
 
+    indexer_filled_with_caches.bulk_manager.done()
+
     assert len(Parameter.objects.all()) == 10
 
     obj = Parameter.objects.first()
@@ -334,6 +356,8 @@ def test_save_parameters_empty(indexer_filled_with_caches, item_sample, version_
 @pytest.mark.django_db
 def test_save_all(indexer_filled_with_caches, item_sample, version_sample):
     indexer_filled_with_caches.save_all(version_sample, item_sample)
+
+    indexer_filled_with_caches.bulk_manager.done()
 
     assert len(Version.objects.all()) == 1
     assert len(Position.objects.all()) == 1

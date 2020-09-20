@@ -78,12 +78,14 @@ class Indexer(object):
        в этом случае никакого rc не должно быть
     """
 
-    def __init__(self, save_chunk_size=100):
+    def __init__(self, get_chunk_size=100, save_chunk_size=100):
         self.spider_slug = 'wb'
+        self.get_chunk_size = get_chunk_size
+        self.save_chunk_size = save_chunk_size
 
         self.marketplace_model = self.get_marketplace_model(self.spider_slug)
         self.sh_client = ScrapinghubClient(settings.SH_APIKEY)
-        self.bulk_manager = BulkCreateManager(chunk_size=save_chunk_size)
+        self.bulk_manager = BulkCreateManager(chunk_size=self.save_chunk_size)
 
         self.catalogs_cache = {}
         self.brands_cache = {}
@@ -95,8 +97,8 @@ class Indexer(object):
         self.skus_retrieved = {}
         self.parameters_retrieved = {}
 
-    def prepare_dump(self, job_id, chunk_size=500):
-        generator = self.get_generator(job_id=job_id, chunk_size=chunk_size)
+    def prepare_dump(self, job_id):
+        generator = self.get_generator(job_id=job_id, chunk_size=self.get_chunk_size)
 
         dump = self.get_or_save_dump(self.spider_slug, job_id)
         dump.set_state(Dump.PREPARING)
@@ -109,8 +111,8 @@ class Indexer(object):
 
         return self
 
-    def import_dump(self, job_id, start=0, count=sys.maxsize, chunk_size=500):
-        generator = self.get_generator(job_id=job_id, start=start, count=count, chunk_size=chunk_size)
+    def import_dump(self, job_id, start=0, count=sys.maxsize):
+        generator = self.get_generator(job_id=job_id, start=start, count=count, chunk_size=self.get_chunk_size)
 
         dump = self.get_or_save_dump(self.spider_slug, job_id)
 
@@ -128,12 +130,15 @@ class Indexer(object):
             try:
                 start_time = time.time()
                 mem_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024  # в мегабайтах
-                max_mem_usage = 512 / 6  # на самом деле делить нужно на количество потоков
+                # max_mem_usage = 512 / 6  # на самом деле делить нужно на количество потоков
 
-                if mem_usage > max_mem_usage:
-                    logger.info(f'Memory usage high ({mem_usage} of {max_mem_usage} MB), clearing caches')
+                # if mem_usage > max_mem_usage:
+                #     logger.info(f'Memory usage high ({mem_usage} of {max_mem_usage} MB), clearing caches')
+                #
+                #     self.clear_retrieved()
 
-                    self.clear_collections()
+                self.clear_retrieved()
+                self.clear_caches()
 
                 for item in chunk:
                     self.collect_all(item)
@@ -148,6 +153,8 @@ class Indexer(object):
                         version = self.save_version(dump, item)
 
                         self.save_all(version, item)
+
+                    self.bulk_manager.done()
 
                 time_spent = time.time() - start_time
 
@@ -221,88 +228,66 @@ class Indexer(object):
 
     def save_position(self, version, item):
         if 'wb_category_position' in item.keys():
-            position = Position(
+            self.bulk_manager.add(Position(
                 sku_id=self.skus_cache[item['wb_id']],
                 version=version,
                 catalog_id=self.catalogs_cache[item['wb_category_url']],
                 absolute=item['wb_category_position'],
-            )
-
-            position.save()
-
-            return position
+            ))
 
     def save_price(self, version, item):
         if 'wb_price' in item.keys():
-            price = Price(
+            self.bulk_manager.add(Price(
                 sku_id=self.skus_cache[item['wb_id']],
                 version=version,
                 price=float(item['wb_price']),
-            )
-
-            price.save()
-
-            return price
+            ))
 
     def save_rating(self, version, item):
         if 'wb_rating' in item.keys():
-            rating = Rating(
+            self.bulk_manager.add(Rating(
                 sku_id=self.skus_cache[item['wb_id']],
                 version=version,
                 rating=item['wb_rating'],
-            )
-
-            rating.save()
-
-            return rating
+            ))
 
     def save_sales(self, version, item):
         if 'wb_purchases_count' in item.keys():
-            sales = Sales(
+            self.bulk_manager.add(Sales(
                 sku_id=self.skus_cache[item['wb_id']],
                 version=version,
                 sales=item['wb_purchases_count'],
-            )
-
-            sales.save()
-
-            return sales
+            ))
 
     def save_reviews(self, version, item):
         if 'wb_reviews_count' in item.keys():
-            reviews = Reviews(
+            self.bulk_manager.add(Reviews(
                 sku_id=self.skus_cache[item['wb_id']],
                 version=version,
                 reviews=item['wb_reviews_count'],
-            )
-
-            reviews.save()
-
-            return reviews
+            ))
 
     def save_parameters(self, version, item):
         if 'features' in item.keys():
-            parameters = []
-
             for feature_name, feature_value in item['features'][0].items():
-                parameter = Parameter(
+                self.bulk_manager.add(Parameter(
                     sku_id=self.skus_cache[item['wb_id']],
                     version=version,
                     parameter_id=self.parameters_cache[feature_name],
                     value=feature_value,
-                )
+                ))
 
-                parameter.save()
-
-                parameters.append(parameter)
-
-            return parameters
-
-    def clear_collections(self):
+    def clear_retrieved(self):
         self.catalogs_retrieved = {}
         self.brands_retrieved = {}
         self.parameters_retrieved = {}
         self.skus_retrieved = {}
+
+    def clear_caches(self):
+        self.catalogs_cache = {}
+        self.brands_cache = {}
+        self.parameters_cache = {}
+        self.skus_cache = {}
 
     def collect_all(self, item):
         self.collect_wb_catalogs(item)

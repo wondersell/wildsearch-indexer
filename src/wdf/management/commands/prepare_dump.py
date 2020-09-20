@@ -9,7 +9,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('job_id', type=str)
-        parser.add_argument('--chunk_size', type=int, default=500, required=False)
+        parser.add_argument('--save_chunk_size', type=int, default=100, required=False)
+        parser.add_argument('--get_chunk_size', type=int, default=100, required=False)
 
     def handle(self, *args, **options):
         console = logging.StreamHandler()
@@ -19,5 +20,5 @@ class Command(BaseCommand):
         logger = logging.getLogger('')
         logger.addHandler(console)
 
-        indexer = Indexer()
-        indexer.prepare_dump(job_id=options['job_id'], chunk_size=options['chunk_size'])
+        indexer = Indexer(get_chunk_size=options['get_chunk_size'], save_chunk_size=options['save_chunk_size'])
+        indexer.prepare_dump(job_id=options['job_id'])
