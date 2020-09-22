@@ -25,7 +25,7 @@ class Command(BaseCommand):
         if options['background']:
             job_id = options['job_id']
             import_dump.delay(job_id=job_id)
-            self.stdout.write(self.style.SUCCESS(f'Job #{job_id} added to process queue for preparing'))
+            self.stdout.write(self.style.SUCCESS(f'Job #{job_id} added to process queue for import'))
         else:
             indexer = Indexer(get_chunk_size=options['get_chunk_size'], save_chunk_size=options['save_chunk_size'])
             indexer.import_dump(job_id=options['job_id'])
