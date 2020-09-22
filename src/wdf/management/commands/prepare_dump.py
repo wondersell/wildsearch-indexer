@@ -2,6 +2,7 @@ import logging
 from django.core.management.base import BaseCommand
 
 from wdf.indexer import Indexer
+from wdf.tasks import prepare_dump
 
 
 class Command(BaseCommand):
@@ -22,3 +23,11 @@ class Command(BaseCommand):
 
         indexer = Indexer(get_chunk_size=options['get_chunk_size'], save_chunk_size=options['save_chunk_size'])
         indexer.prepare_dump(job_id=options['job_id'])
+
+        if options['background']:
+            job_id = options['job_id']
+            prepare_dump.delay(job_id=job_id)
+            self.stdout.write(self.style.SUCCESS(f'Job #{job_id} added to process queue for import'))
+        else:
+            indexer = Indexer(get_chunk_size=options['get_chunk_size'], save_chunk_size=options['save_chunk_size'])
+            indexer.import_dump(job_id=options['job_id'])
