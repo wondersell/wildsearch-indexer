@@ -2,8 +2,8 @@ import logging
 from celery import shared_task
 from requests.exceptions import RequestException
 
-from wdf.indexer import Indexer
 from wdf.exceptions import DumpStateTooEarlyError, DumpStateTooLateError
+from wdf.indexer import Indexer
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -24,7 +24,7 @@ def prepare_dump(job_id):
     try:
         indexer.prepare_dump(job_id=job_id)
     except DumpStateTooLateError as e:
-        logger.error(f'Job {job_id} import failed. {e.message}')
+        logger.error(f'Job {job_id} import failed. {str(e)}')
 
     logger.info(f'Dump for job {job_id} prepared, adding import task')
 
@@ -46,6 +46,6 @@ def import_dump(job_id):
     try:
         indexer.import_dump(job_id=job_id)
     except DumpStateTooLateError as e:
-        logger.error(f'Job {job_id} import failed. {e.message}')
+        logger.error(f'Job {job_id} import failed. {str(e)}')
 
     logger.info(f'Dump for job {job_id} imported')
