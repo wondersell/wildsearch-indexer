@@ -11,6 +11,7 @@ from django.apps import apps
 from django.conf import settings
 from scrapinghub import ScrapinghubClient
 
+from wdf.exceptions import DumpStateTooEarlyError, DumpStateTooLateError
 from wdf.models import (
     DictBrand, DictCatalog, DictMarketplace, DictParameter, Dump, Parameter, Position, Price, Rating, Reviews, Sales,
     Sku, Version)
@@ -101,6 +102,10 @@ class Indexer(object):
         generator = self.get_generator(job_id=job_id, chunk_size=self.get_chunk_size)
 
         dump = self.get_or_save_dump(self.spider_slug, job_id)
+
+        if dump.state_code > 0:
+            raise DumpStateTooLateError(f'Wrong dump state code ({dump.state_code} – {dump.state}) for preparing dump, too late')
+
         dump.set_state(Dump.PREPARING)
         dump.save()
 
@@ -116,7 +121,19 @@ class Indexer(object):
 
         dump = self.get_or_save_dump(self.spider_slug, job_id)
 
+        if dump.state_code < 10:
+            raise DumpStateTooEarlyError(f'Wrong dump state code ({dump.state_code} – {dump.state}) for importing dump, too early')
+
+        if dump.state_code > 10:
+            raise DumpStateTooLateError(f'Wrong dump state code ({dump.state_code} – {dump.state}) for importing dump, too late')
+
+        dump.set_state(Dump.PROCESSING)
+        dump.save()
+
         self.process_batch(generator=generator, dump=dump, save_versions=True)
+
+        dump.set_state(Dump.PROCESSED)
+        dump.save()
 
         return self
 

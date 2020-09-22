@@ -19,6 +19,14 @@ def indexer():
 
 
 @pytest.fixture()
+def sample_category_data_raw(current_path):
+    def _sample_category_data_raw(spider='wb'):
+        return open(current_path + f'/mocks/scrapinghub_items_{spider}_raw.msgpack', 'rb').read()
+
+    return _sample_category_data_raw
+
+
+@pytest.fixture()
 def items_sample(current_path):
     with open(current_path + '/mocks/items_list.json') as f:
         return json.loads(f.read())
@@ -56,7 +64,18 @@ def version_sample():
 
 @pytest.fixture()
 def dump_sample():
-    return mixer.blend(Dump)
+    def _dump_sample(state=Dump.CREATED, job_id='12345/123/12345', crawler='wb'):
+        dump = mixer.blend(Dump)
+
+        dump.set_state(state)
+        dump.job = job_id
+        dump.crawler = crawler
+
+        dump.save()
+
+        return dump
+
+    return _dump_sample
 
 
 @pytest.fixture()
@@ -76,11 +95,13 @@ def dict_parameter_sample():
 
 @pytest.fixture()
 def _fill_db(indexer_filled_with_caches, items_sample, dump_sample):
+    dump_sample = dump_sample()
+
     indexer_filled_with_caches.process_batch([items_sample], dump_sample, save_versions=True)
 
 
 @pytest.fixture(autouse=True)
-def requests_mocker(current_path):
+def requests_mocker(current_path, sample_category_data_raw):
     """Mock all requests.
     This is an autouse fixture so that tests can't accidentally
     perform real requests without being noticed.
@@ -89,4 +110,5 @@ def requests_mocker(current_path):
         m.get('https://storage.scrapinghub.com/jobs/12345/123/12345/running_time', text='1597854066275')
         m.get('https://storage.scrapinghub.com/jobs/12345/123/12345/finished_time', text='1597854164856')
         m.get('https://storage.scrapinghub.com/jobs/12345/123/12345/scrapystats', text=open(current_path + '/mocks/scrapystats.json', 'r').read())
+        m.get('https://storage.scrapinghub.com/items/12345/123/12345?start=12345%2F123%2F12345%2F0&count=100&meta=_key', content=sample_category_data_raw(spider='wb'), headers={'Content-Type': 'application/x-msgpack; charset=UTF-8'})
         yield m

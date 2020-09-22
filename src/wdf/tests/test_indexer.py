@@ -3,7 +3,8 @@ import pytz
 from dateutil.parser import parse as date_parse
 from mixer.backend.django import mixer
 
-from wdf.indexer import guess_wb_article
+from wdf.exceptions import DumpStateError, DumpStateTooEarlyError, DumpStateTooLateError
+from wdf.indexer import Indexer, guess_wb_article
 from wdf.models import DictCatalog, Dump, Parameter, Position, Price, Rating, Reviews, Sales, Sku, Version
 
 
@@ -194,6 +195,8 @@ def test_update_all_caches(indexer_filled):
 
 @pytest.mark.django_db
 def test_save_version(indexer_filled_with_caches, dump_sample, item_sample):
+    dump_sample = dump_sample()
+
     indexer_filled_with_caches.save_version(dump_sample, item_sample)
 
     indexer_filled_with_caches.bulk_manager.done()
@@ -397,6 +400,8 @@ def test_process_dump_new(indexer_filled):
 
 @pytest.mark.django_db
 def test_process_dump_existing(indexer_filled, dump_sample):
+    dump_sample = dump_sample()
+
     dump_sample.job = '12345/123/12345'
     dump_sample.save()
 
@@ -404,4 +409,127 @@ def test_process_dump_existing(indexer_filled, dump_sample):
 
     obj = indexer_filled.get_or_save_dump('wb', '12345/123/12345')
 
+    assert len(Dump.objects.all()) == 1
+
     assert obj.job == '12345/123/12345'
+
+
+@pytest.mark.django_db
+def test_prepare_dump_changes_state(dump_sample):
+    dump_sample(state=Dump.CREATED, job_id='12345/123/12345', crawler='wb')
+    indexer = Indexer()
+
+    indexer.prepare_dump(job_id='12345/123/12345')
+
+    dump = Dump.objects.first()
+
+    assert dump.state_code == Dump.PREPARED
+
+
+@pytest.mark.django_db
+def test_import_dump_changes_state(dump_sample):
+    dump_sample(state=Dump.PREPARED, job_id='12345/123/12345', crawler='wb')
+    indexer = Indexer()
+
+    indexer.import_dump(job_id='12345/123/12345')
+
+    dump = Dump.objects.first()
+
+    assert dump.state_code == Dump.PROCESSED
+
+
+@pytest.mark.django_db
+def test_prepare_existing_dump_correct(dump_sample):
+    dump_sample(state=Dump.CREATED, job_id='12345/123/12345', crawler='wb')
+    indexer = Indexer()
+
+    indexer.prepare_dump(job_id='12345/123/12345')
+
+    assert len(Sku.objects.all()) == 16
+
+
+@pytest.mark.django_db
+@pytest.mark.django_db
+@pytest.mark.parametrize('state_code', [
+    Dump.PREPARING,
+    Dump.PREPARED,
+    Dump.SCHEDULING,
+    Dump.SCHEDULED,
+    Dump.PROCESSING,
+    Dump.PROCESSED,
+])
+def test_prepare_existing_dump_incorrect(state_code, dump_sample):
+    try:
+        dump_sample(state=state_code, job_id='12345/123/12345', crawler='wb')
+        indexer = Indexer()
+
+        indexer.prepare_dump(job_id='12345/123/12345')
+
+        pytest.fail('Preparing dump with wrong state should raise exception (too late)')
+    except DumpStateTooLateError:
+        assert True
+
+
+@pytest.mark.django_db
+def test_import_existing_dump_correct(dump_sample):
+    dump_sample(state=Dump.PREPARED, job_id='12345/123/12345', crawler='wb')
+    indexer = Indexer()
+
+    indexer.import_dump(job_id='12345/123/12345')
+
+    assert len(Version.objects.all()) == 16
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('state_code', [
+    Dump.CREATED,
+    Dump.PREPARING,
+    Dump.SCHEDULING,
+    Dump.SCHEDULED,
+    Dump.PROCESSING,
+    Dump.PROCESSED,
+])
+def test_import_existing_dump_incorrect(state_code, dump_sample):
+    try:
+        dump_sample(state=state_code, job_id='12345/123/12345', crawler='wb')
+        indexer = Indexer()
+
+        indexer.import_dump(job_id='12345/123/12345')
+
+        pytest.fail('Importing dump with wrong state should raise exception')
+    except DumpStateError:
+        assert True
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('state_code', [
+    Dump.CREATED,
+    Dump.PREPARING,
+])
+def test_import_existing_dump_too_early(state_code, dump_sample):
+    try:
+        dump_sample(state=state_code, job_id='12345/123/12345', crawler='wb')
+        indexer = Indexer()
+
+        indexer.import_dump(job_id='12345/123/12345')
+
+        pytest.fail('Importing dump with wrong state should raise exception (too early)')
+    except DumpStateTooEarlyError:
+        assert True
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('state_code', [
+    Dump.PROCESSING,
+    Dump.PROCESSED,
+])
+def test_import_existing_dump_too_late(state_code, dump_sample):
+    try:
+        dump_sample(state=state_code, job_id='12345/123/12345', crawler='wb')
+        indexer = Indexer()
+
+        indexer.import_dump(job_id='12345/123/12345')
+
+        pytest.fail('Importing dump with wrong state should raise exception (too late)')
+    except DumpStateTooLateError:
+        assert True

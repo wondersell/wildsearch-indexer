@@ -55,6 +55,8 @@ def test_delete_dump():
     (30, 'processed'),
 ])
 def test_set_state(state_code, state, dump_sample):
+    dump_sample = dump_sample()
+
     dump_sample.set_state(state_code)
 
     assert dump_sample.state == state
