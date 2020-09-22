@@ -169,20 +169,20 @@ class Indexer(object):
 
                 time_spent = time.time() - start_time
 
-                logger.info(f'Chunk #{chunk_no} processed in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min, used {round(mem_usage, 2)}MB')
+                logger.info(f'Chunk #{chunk_no} for job {dump.job} processed in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min, used {round(mem_usage, 2)}MB')
 
                 chunk_no += 1
             except KeyboardInterrupt:
                 # В основном для отладки через систему команд Django
                 overall_time_spent = time.time() - overall_start_time
 
-                logger.info(f'{dump} processed in {overall_time_spent}s, {round(items_count / overall_time_spent * 60)} items/min')
+                logger.info(f'{dump} ({dump.job}) processed in {overall_time_spent}s, {round(items_count / overall_time_spent * 60)} items/min')
 
                 raise SystemExit(0)
 
         overall_time_spent = time.time() - overall_start_time
 
-        logger.info(f'{dump} processed in {overall_time_spent}s, {round(items_count / overall_time_spent * 60)} items/min')
+        logger.info(f'{dump} ({dump.job}) processed in {overall_time_spent}s, {round(items_count / overall_time_spent * 60)} items/min')
 
         return self
 
