@@ -12,7 +12,7 @@ class Command(BaseCommand):
         parser.add_argument('job_id', type=str)
         parser.add_argument('--save_chunk_size', type=int, default=1000, required=False)
         parser.add_argument('--get_chunk_size', type=int, default=1000, required=False)
-        parser.add_argument('--background', type=bool, default=True, required=False)
+        parser.add_argument('--background', choices=['yes', 'no'], default='yes')
 
     def handle(self, *args, **options):
         console = logging.StreamHandler()
@@ -22,7 +22,7 @@ class Command(BaseCommand):
         logger = logging.getLogger('')
         logger.addHandler(console)
 
-        if options['background']:
+        if options['background'] == 'yes':
             job_id = options['job_id']
             import_dump.delay(job_id=job_id)
             self.stdout.write(self.style.SUCCESS(f'Job #{job_id} added to process queue for import'))
