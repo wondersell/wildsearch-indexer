@@ -102,6 +102,8 @@ class Indexer(object):
         self.skus_retrieved = {}
         self.parameters_retrieved = {}
 
+        self.log_prefix = ''
+
     def prepare_dump(self, job_id):
         generator = self.get_generator(job_id=job_id, chunk_size=self.get_chunk_size)
 
@@ -145,6 +147,8 @@ class Indexer(object):
         items_count = 0
 
         for chunk in generator:
+            self.log_prefix = f'Job {dump.job}, chunk #{chunk_no}: '
+
             try:
                 start_time = time.time()
                 mem_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024  # в мегабайтах
@@ -162,11 +166,11 @@ class Indexer(object):
                 if save_versions:
                     self.save_all(dump, chunk)
 
-                    self.bulk_manager.done()
+                    self.bulk_manager.done(log_prefix=self.log_prefix)
 
                 time_spent = time.time() - start_time
 
-                logger.info(f'Chunk #{chunk_no} for job {dump.job} processed in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min, used {round(mem_usage, 2)}MB')
+                logger.info(f'{self.log_prefix}Processed in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min, used {round(mem_usage, 2)}MB')
 
                 chunk_no += 1
             except KeyboardInterrupt:
@@ -179,7 +183,7 @@ class Indexer(object):
 
         overall_time_spent = time.time() - overall_start_time
 
-        logger.info(f'{dump} ({dump.job}) processed in {overall_time_spent}s, {round(items_count / overall_time_spent * 60)} items/min')
+        logger.info(f'{self.log_prefix}Processed in {overall_time_spent}s, {round(items_count / overall_time_spent * 60)} items/min')
 
         return self
 
@@ -207,7 +211,7 @@ class Indexer(object):
             self.save_parameters(version, item)
             self.save_position(version, item)
 
-        self.bulk_manager.done()
+        self.bulk_manager.done(log_prefix=self.log_prefix)
 
     def get_or_save_dump(self, spider_slug, job_id):
         if Dump.objects.filter(job=job_id).count() > 0:
@@ -359,6 +363,10 @@ class Indexer(object):
 
     # Обновление горячего кеша объектов в памяти данными, которые есть в БД
     def update_caches_from_db(self, object_name, model, cache_key):
+        model_key = model._meta.label
+
+        start_time = time.time()
+
         retrieved_attr_name = object_name + '_retrieved'
         cached_attr_name = object_name + '_cache'
 
@@ -377,6 +385,13 @@ class Indexer(object):
         # сохраняем найденное в память
         setattr(self, cached_attr_name, {**getattr(self, cached_attr_name),
                                          **dict([(getattr(item, cache_key), item.id) for item in items_retrieved])})
+
+        items_count = len(items_retrieved)
+
+        time_spent = time.time() - start_time
+
+        logger.info(
+            f'{self.log_prefix}{model_key} objects retrieved from DB ({items_count} items) in {time_spent}s, {round(items_count / time_spent * 60)} items/min')
 
     # Поиск несуществующих в кеше объектов
     def filter_items_not_found(self, object_name, model, cache_key):
@@ -399,7 +414,7 @@ class Indexer(object):
                 created_at=timezone.now(),
             ))
 
-        self.bulk_manager.done()
+        self.bulk_manager.done(log_prefix=self.log_prefix)
 
         self.update_caches_from_db('catalogs', DictCatalog, 'url')
 
@@ -414,7 +429,7 @@ class Indexer(object):
                 created_at=timezone.now(),
             ))
 
-        self.bulk_manager.done()
+        self.bulk_manager.done(log_prefix=self.log_prefix)
 
         self.update_caches_from_db('brands', DictBrand, 'url')
 
@@ -428,7 +443,7 @@ class Indexer(object):
                 created_at=timezone.now(),
             ))
 
-        self.bulk_manager.done()
+        self.bulk_manager.done(log_prefix=self.log_prefix)
 
         self.update_caches_from_db('parameters', DictParameter, 'name')
 
@@ -451,7 +466,7 @@ class Indexer(object):
                 updated_at=timezone.now(),
             ))
 
-        self.bulk_manager.done()
+        self.bulk_manager.done(log_prefix=self.log_prefix)
 
         self.update_caches_from_db('skus', Sku, 'article')
 
@@ -472,6 +487,8 @@ class BulkCreateManager(object):
         self._pg_copy_create_queues = defaultdict(list)
         self._bulk_create_queues = defaultdict(list)
 
+        self.log_prefix = ''
+
     def add(self, obj):
         """
         Добавление объекта в список на пакетную загрузку
@@ -480,10 +497,12 @@ class BulkCreateManager(object):
         model_key = model_class._meta.label
         self._pg_copy_create_queues[model_key].append(obj)
 
-    def done(self):
+    def done(self, log_prefix=''):
         """
         Пакетная загрузка всех объектов из всех списков
         """
+        self.log_prefix = log_prefix
+
         for model_name, objects in self._pg_copy_create_queues.items():
             if len(objects) > 0:
                 self._commit(apps.get_model(model_name))
@@ -513,16 +532,23 @@ class BulkCreateManager(object):
         """
         model_key = model_class._meta.label
 
-        logger.info(f'Committing {len(self._pg_copy_create_queues[model_key])} {model_key} objects via PG COPY')
-
         export_file, header = self._prepare_export_csv_with_headers(model_class)
 
         cursor = connection.cursor()
 
         try:
+            start_time = time.time()
+
+            items_count = len(self._pg_copy_create_queues[model_key])
+
             cursor.copy_from(export_file, model_class._meta.db_table, sep='\t', null='', columns=header)
 
             connection.commit()
+
+            time_spent = time.time() - start_time
+
+            logger.info(
+                f'{self.log_prefix}{model_key} dump saved via PG COPY ({items_count} items) in {time_spent}s, {round(items_count / time_spent * 60)} items/min')
         except psycopg2.DatabaseError as error:
             """
             Иногда у COPY не получается импортировать какую-то строчку просто потому что иди нахуй, вот почему.
@@ -531,11 +557,11 @@ class BulkCreateManager(object):
             """
             line_number = int(re.findall(r'line (\d+)', str(error))[0])
 
-            logger.error(f'Copy to table {model_class._meta.db_table} failed for row {line_number}: {self._pg_copy_create_queues[model_key][line_number - 1].__dict__}')
+            logger.error(f'{self.log_prefix}Copy to table {model_class._meta.db_table} failed for row {line_number}: {self._pg_copy_create_queues[model_key][line_number - 1].__dict__}')
 
             self._bulk_create_queues[model_key].append(self._pg_copy_create_queues[model_key].pop(line_number - 1))
 
-            logger.info(f'Retrying COPY to table {model_class._meta.db_table} without problem row')
+            logger.info(f'{self.log_prefix}Retrying COPY to table {model_class._meta.db_table} without problem row')
 
             connection.rollback()
 
@@ -553,17 +579,28 @@ class BulkCreateManager(object):
         """
         model_key = model_class._meta.label
 
-        logger.info(f'Committing {len(self._bulk_create_queues[model_key])} {model_key} objects via bulk_create')
+        start_time = time.time()
+
+        items_count = len(self._bulk_create_queues[model_key])
 
         model_class.objects.bulk_create(self._bulk_create_queues[model_key])
 
         self._bulk_create_queues[model_key] = []
+
+        time_spent = time.time() - start_time
+
+        logger.info(
+            f'{self.log_prefix}{model_key} dump saved via bulk_create ({items_count} items) in {time_spent}s, {round(items_count / time_spent * 60)} items/min')
 
     def _prepare_export_csv_with_headers(self, model_class):
         """
         Подготовка CSV массива данных для COPY FROM
         """
         model_key = model_class._meta.label
+
+        start_time = time.time()
+
+        items_count = len(self._pg_copy_create_queues[model_key])
 
         csv_data = StringIO()
 
@@ -581,6 +618,11 @@ class BulkCreateManager(object):
 
         csv_data.seek(0)
 
+        time_spent = time.time() - start_time
+
+        logger.info(
+            f'{self.log_prefix}{model_key} dump for PG COPY ({items_count} items) prepared in {time_spent}s, {round(items_count / time_spent * 60)} items/min')
+
         return csv_data, header
 
     def _check_for_text_fields(self, model_class):
@@ -595,7 +637,7 @@ class BulkCreateManager(object):
 
         for field in model_class._meta.get_fields():
             if isinstance(field, models.CharField):
-                logger.info(f'Detected text field in model {model_key}, using bulk create instead of PG COPY')
+                logger.info(f'{self.log_prefix}Detected text field in model {model_key}, using bulk create instead of PG COPY')
 
                 return True
 
