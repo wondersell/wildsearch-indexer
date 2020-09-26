@@ -1,6 +1,7 @@
 import logging
 from django.core.management.base import BaseCommand
 
+from wdf.exceptions import DumpStateError
 from wdf.indexer import Indexer
 from wdf.tasks import prepare_dump
 
@@ -11,6 +12,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('job_id', type=str)
         parser.add_argument('--chunk_size', type=int, default=5000, required=False)
+        parser.add_argument('--background', choices=['yes', 'no'], default='yes')
 
     def handle(self, *args, **options):
         console = logging.StreamHandler()
@@ -20,13 +22,14 @@ class Command(BaseCommand):
         logger = logging.getLogger('')
         logger.addHandler(console)
 
-        indexer = Indexer(get_chunk_size=options['chunk_size'])
-        indexer.prepare_dump(job_id=options['job_id'])
+        job_id = options['job_id']
 
         if options['background']:
-            job_id = options['job_id']
             prepare_dump.delay(job_id=job_id)
             self.stdout.write(self.style.SUCCESS(f'Job #{job_id} added to process queue for preparing'))
         else:
-            indexer = Indexer(get_chunk_size=options['chunk_size'])
-            indexer.import_dump(job_id=options['job_id'])
+            try:
+                indexer = Indexer(get_chunk_size=options['chunk_size'])
+                indexer.prepare_dump(job_id=options['job_id'])
+            except DumpStateError as error:
+                self.stdout.write(self.style.ERROR(f'Job #{job_id} processing failed: {error}'))

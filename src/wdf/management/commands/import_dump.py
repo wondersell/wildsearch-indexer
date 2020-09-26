@@ -1,6 +1,7 @@
 import logging
 from django.core.management.base import BaseCommand
 
+from wdf.exceptions import DumpStateError
 from wdf.indexer import Indexer
 from wdf.tasks import import_dump
 
@@ -21,10 +22,14 @@ class Command(BaseCommand):
         logger = logging.getLogger('')
         logger.addHandler(console)
 
+        job_id = options['job_id']
+
         if options['background'] == 'yes':
-            job_id = options['job_id']
             import_dump.delay(job_id=job_id)
             self.stdout.write(self.style.SUCCESS(f'Job #{job_id} added to process queue for import'))
         else:
-            indexer = Indexer(get_chunk_size=options['chunk_size'])
-            indexer.import_dump(job_id=options['job_id'])
+            try:
+                indexer = Indexer(get_chunk_size=options['chunk_size'])
+                indexer.import_dump(job_id=options['job_id'])
+            except DumpStateError as error:
+                self.stdout.write(self.style.ERROR(f'Job #{job_id} processing failed: {error}'))
