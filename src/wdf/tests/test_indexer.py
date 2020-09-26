@@ -3,7 +3,7 @@ import pytz
 from dateutil.parser import parse as date_parse
 from mixer.backend.django import mixer
 
-from wdf.exceptions import DumpStateError, DumpStateTooEarlyError, DumpStateTooLateError
+from wdf.exceptions import DumpStateError, DumpStateTooLateError
 from wdf.indexer import Indexer, guess_wb_article
 from wdf.models import DictCatalog, Dump, Parameter, Position, Price, Rating, Reviews, Sales, Sku, Version
 
@@ -357,18 +357,20 @@ def test_save_parameters_empty(indexer_filled_with_caches, item_sample, version_
 
 
 @pytest.mark.django_db
-def test_save_all(indexer_filled_with_caches, item_sample, version_sample):
-    indexer_filled_with_caches.save_all(version_sample, item_sample)
+def test_save_all(indexer_filled_with_caches, dump_sample, items_sample):
+    dump = dump_sample()
+
+    indexer_filled_with_caches.save_all(dump, items_sample)
 
     indexer_filled_with_caches.bulk_manager.done()
 
-    assert len(Version.objects.all()) == 1
-    assert len(Position.objects.all()) == 1
-    assert len(Price.objects.all()) == 1
-    assert len(Rating.objects.all()) == 1
-    assert len(Sales.objects.all()) == 1
-    assert len(Reviews.objects.all()) == 1
-    assert len(Parameter.objects.all()) == 10
+    assert len(Version.objects.all()) == 26
+    assert len(Position.objects.all()) == 24
+    assert len(Price.objects.all()) == 26
+    assert len(Rating.objects.all()) == 26
+    assert len(Sales.objects.all()) == 26
+    assert len(Reviews.objects.all()) == 26
+    assert len(Parameter.objects.all()) == 215
 
 
 @pytest.mark.django_db
@@ -482,8 +484,6 @@ def test_import_existing_dump_correct(dump_sample):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize('state_code', [
-    Dump.CREATED,
-    Dump.PREPARING,
     Dump.SCHEDULING,
     Dump.SCHEDULED,
     Dump.PROCESSING,
@@ -498,23 +498,6 @@ def test_import_existing_dump_incorrect(state_code, dump_sample):
 
         pytest.fail('Importing dump with wrong state should raise exception')
     except DumpStateError:
-        assert True
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize('state_code', [
-    Dump.CREATED,
-    Dump.PREPARING,
-])
-def test_import_existing_dump_too_early(state_code, dump_sample):
-    try:
-        dump_sample(state=state_code, job_id='12345/123/12345', crawler='wb')
-        indexer = Indexer()
-
-        indexer.import_dump(job_id='12345/123/12345')
-
-        pytest.fail('Importing dump with wrong state should raise exception (too early)')
-    except DumpStateTooEarlyError:
         assert True
 
 

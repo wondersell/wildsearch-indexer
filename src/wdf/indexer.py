@@ -1,17 +1,22 @@
 import logging
+import psycopg2
 import pytz
 import re
 import resource
 import sys
 import time
 from collections import defaultdict
+from csv import DictWriter
 from datetime import datetime
 from dateutil.parser import parse as date_parse
 from django.apps import apps
 from django.conf import settings
+from django.db import connection, models
+from django.utils import timezone
+from io import StringIO
 from scrapinghub import ScrapinghubClient
 
-from wdf.exceptions import DumpStateTooEarlyError, DumpStateTooLateError
+from wdf.exceptions import DumpStateTooLateError
 from wdf.models import (
     DictBrand, DictCatalog, DictMarketplace, DictParameter, Dump, Parameter, Position, Price, Rating, Reviews, Sales,
     Sku, Version)
@@ -79,14 +84,13 @@ class Indexer(object):
        в этом случае никакого rc не должно быть
     """
 
-    def __init__(self, get_chunk_size=100, save_chunk_size=100):
+    def __init__(self, get_chunk_size=100):
         self.spider_slug = 'wb'
         self.get_chunk_size = get_chunk_size
-        self.save_chunk_size = save_chunk_size
 
         self.marketplace_model = self.get_marketplace_model(self.spider_slug)
         self.sh_client = ScrapinghubClient(settings.SH_APIKEY)
-        self.bulk_manager = BulkCreateManager(chunk_size=self.save_chunk_size)
+        self.bulk_manager = BulkCreateManager()
 
         self.catalogs_cache = {}
         self.brands_cache = {}
@@ -120,9 +124,6 @@ class Indexer(object):
         generator = self.get_generator(job_id=job_id, start=start, count=count, chunk_size=self.get_chunk_size)
 
         dump = self.get_or_save_dump(self.spider_slug, job_id)
-
-        if dump.state_code < 10:
-            raise DumpStateTooEarlyError(f'Wrong dump state code ({dump.state_code} – {dump.state}) for importing dump, too early')
 
         if dump.state_code > 10:
             raise DumpStateTooLateError(f'Wrong dump state code ({dump.state_code} – {dump.state}) for importing dump, too late')
@@ -159,11 +160,7 @@ class Indexer(object):
                 self.update_all_caches(self.catalogs_retrieved, self.brands_retrieved, self.parameters_retrieved, self.skus_retrieved)
 
                 if save_versions:
-                    # Записываем версии для каждого артикула
-                    for item in chunk:
-                        version = self.save_version(dump, item)
-
-                        self.save_all(version, item)
+                    self.save_all(dump, chunk)
 
                     self.bulk_manager.done()
 
@@ -199,13 +196,18 @@ class Indexer(object):
 
         return marketplace_model
 
-    def save_all(self, version, item):
-        self.save_price(version, item)
-        self.save_rating(version, item)
-        self.save_sales(version, item)
-        self.save_reviews(version, item)
-        self.save_parameters(version, item)
-        self.save_position(version, item)
+    def save_all(self, dump, chunk):
+        for item in chunk:
+            version = self.save_version(dump=dump, item=item)
+
+            self.save_price(version, item)
+            self.save_rating(version, item)
+            self.save_sales(version, item)
+            self.save_reviews(version, item)
+            self.save_parameters(version, item)
+            self.save_position(version, item)
+
+        self.bulk_manager.done()
 
     def get_or_save_dump(self, spider_slug, job_id):
         if Dump.objects.filter(job=job_id).count() > 0:
@@ -231,9 +233,10 @@ class Indexer(object):
             dump=dump,
             sku_id=self.skus_cache[item['wb_id']],
             crawled_at=pytz.utc.localize(date_parse(item['parse_date'])),
+            created_at=timezone.now(),
         )
 
-        version.save()
+        self.bulk_manager.add(version)
 
         return version
 
@@ -244,6 +247,7 @@ class Indexer(object):
                 version=version,
                 catalog_id=self.catalogs_cache[item['wb_category_url']],
                 absolute=item['wb_category_position'],
+                created_at=timezone.now(),
             ))
 
     def save_price(self, version, item):
@@ -252,6 +256,7 @@ class Indexer(object):
                 sku_id=self.skus_cache[item['wb_id']],
                 version=version,
                 price=float(item['wb_price']),
+                created_at=timezone.now(),
             ))
 
     def save_rating(self, version, item):
@@ -260,6 +265,7 @@ class Indexer(object):
                 sku_id=self.skus_cache[item['wb_id']],
                 version=version,
                 rating=item['wb_rating'],
+                created_at=timezone.now(),
             ))
 
     def save_sales(self, version, item):
@@ -268,6 +274,7 @@ class Indexer(object):
                 sku_id=self.skus_cache[item['wb_id']],
                 version=version,
                 sales=item['wb_purchases_count'],
+                created_at=timezone.now(),
             ))
 
     def save_reviews(self, version, item):
@@ -276,6 +283,7 @@ class Indexer(object):
                 sku_id=self.skus_cache[item['wb_id']],
                 version=version,
                 reviews=item['wb_reviews_count'],
+                created_at=timezone.now(),
             ))
 
     def save_parameters(self, version, item):
@@ -286,6 +294,7 @@ class Indexer(object):
                     version=version,
                     parameter_id=self.parameters_cache[feature_name],
                     value=feature_value,
+                    created_at=timezone.now(),
                 ))
 
     def clear_retrieved(self):
@@ -383,10 +392,11 @@ class Indexer(object):
         for catalog_url in self.filter_items_not_found('catalogs', DictCatalog, 'url'):
             self.bulk_manager.add(DictCatalog(
                 marketplace_id=retrieved[catalog_url]['marketplace'],
-                parent_id=retrieved[catalog_url]['parent'],
+                parent_id=retrieved[catalog_url]['parent'] or None,
                 name=retrieved[catalog_url]['name'],
                 url=retrieved[catalog_url]['url'],
                 level=retrieved[catalog_url]['level'],
+                created_at=timezone.now(),
             ))
 
         self.bulk_manager.done()
@@ -401,6 +411,7 @@ class Indexer(object):
                 marketplace_id=retrieved[brand_url]['marketplace'],
                 name=retrieved[brand_url]['name'],
                 url=retrieved[brand_url]['url'],
+                created_at=timezone.now(),
             ))
 
         self.bulk_manager.done()
@@ -414,6 +425,7 @@ class Indexer(object):
             self.bulk_manager.add(DictParameter(
                 marketplace_id=retrieved[parameter_name]['marketplace'],
                 name=parameter_name,
+                created_at=timezone.now(),
             ))
 
         self.bulk_manager.done()
@@ -435,6 +447,8 @@ class Indexer(object):
                 url=retrieved[sku_article]['url'],
                 title=retrieved[sku_article]['title'],
                 brand_id=brand_id,
+                created_at=timezone.now(),
+                updated_at=timezone.now(),
             ))
 
         self.bulk_manager.done()
@@ -444,42 +458,160 @@ class Indexer(object):
 
 class BulkCreateManager(object):
     """
-    This helper class keeps track of ORM objects to be created for multiple
-    model classes, and automatically creates those objects with `bulk_create`
-    when the number of objects accumulated for a given model class exceeds
-    `chunk_size`.
-    Upon completion of the loop that's `add()`ing objects, the developer must
-    call `done()` to ensure the final set of objects is created for all models.
+    Приблуда для сбора объектов Django ORM и пакетной загрузки их в БД через COPY FROM Посгреса или bulk_create Джанги
+    с учетом их ограничений. Автоматически разбивает объекты на очереди в зависимости от их типа. Новый объект
+    добавляется методом add(), загрузка происходит после вызова метода done(). Метод done() сохраняет записи из
+    всех очередей.
+
+    Не буду выносить отдельным модулем – слишком много специфики процесса загрузки наших данных.
     """
 
-    def __init__(self, chunk_size=100):
-        self._create_queues = defaultdict(list)
-        self.chunk_size = chunk_size
-
-    def _commit(self, model_class):
-        model_key = model_class._meta.label
-        model_class.objects.bulk_create(self._create_queues[model_key])
-        self._create_queues[model_key] = []
+    def __init__(self):
+        self._pg_copy_create_queues = defaultdict(list)
+        self._bulk_create_queues = defaultdict(list)
 
     def add(self, obj):
         """
-        Add an object to the queue to be created, and call bulk_create if we
-        have enough objs.
+        Добавление объекта в список на пакетную загрузку
         """
         model_class = type(obj)
         model_key = model_class._meta.label
-        self._create_queues[model_key].append(obj)
-        if len(self._create_queues[model_key]) >= self.chunk_size:
-            self._commit(model_class)
+        self._pg_copy_create_queues[model_key].append(obj)
 
     def done(self):
         """
-        Always call this upon completion to make sure the final partial chunk
-        is saved.
+        Пакетная загрузка всех объектов из всех списков
         """
-        for model_name, objects in self._create_queues.items():
+        for model_name, objects in self._pg_copy_create_queues.items():
             if len(objects) > 0:
                 self._commit(apps.get_model(model_name))
+
+    def _commit(self, model_class):
+        """
+        Определение что каким методом будем загружать
+        """
+        model_key = model_class._meta.label
+
+        has_text_fields = self._check_for_text_fields(model_class)
+        has_cursor = self._check_for_cursor()
+
+        if has_text_fields is True or has_cursor is False:
+            self._move_to_bulk_create(model_class)
+
+        if len(self._pg_copy_create_queues[model_key]) > 0:
+            self._commit_pg_copy(model_class)
+
+        if len(self._bulk_create_queues[model_key]) > 0:
+            self._commit_bulk_create(model_class)
+
+    def _commit_pg_copy(self, model_class):
+        """
+        Алгоритм загрузки через команду COPY FROM Постгреса с возможностью фоллбэка на bulk_create,
+        если что-то пошло не так
+        """
+        model_key = model_class._meta.label
+
+        logger.info(f'Committing {len(self._pg_copy_create_queues[model_key])} {model_key} objects via PG COPY')
+
+        export_file, header = self._prepare_export_csv_with_headers(model_class)
+
+        cursor = connection.cursor()
+
+        try:
+            cursor.copy_from(export_file, model_class._meta.db_table, sep='\t', null='', columns=header)
+
+            connection.commit()
+        except psycopg2.DatabaseError as error:
+            """
+            Иногда у COPY не получается импортировать какую-то строчку просто потому что иди нахуй, вот почему.
+            В этом случае исключаем строку на импорт с COPY и пробуем еще раз. Исключенные строки потом попробуем
+            импортировать через bulk_create (обычно помогает)
+            """
+            line_number = int(re.findall(r'line (\d+)', str(error))[0])
+            logger.error(f'Copy to table {model_class._meta.db_table} failed: {error}')
+            logger.error(f'Detected line number: {line_number}')
+            logger.error(f'Contents of row #{line_number}: {self._pg_copy_create_queues[model_key][line_number - 1].__dict__}')
+
+            self._bulk_create_queues[model_key].append(self._pg_copy_create_queues[model_key].pop(line_number - 1))
+
+            connection.rollback()
+
+            cursor.close()
+
+            logger.info(f'Retrying COPY to table {model_class._meta.db_table} without problem row')
+
+            self._commit(model_class)
+        else:
+            cursor.close()
+
+            self._pg_copy_create_queues[model_key] = []
+
+    def _commit_bulk_create(self, model_class):
+        """
+        Алгоритм загрузки через bulk_create из Django ORM
+        """
+        model_key = model_class._meta.label
+
+        logger.info(f'Committing {len(self._bulk_create_queues[model_key])} {model_key} objects via bulk_create')
+
+        model_class.objects.bulk_create(self._bulk_create_queues[model_key])
+
+        self._bulk_create_queues[model_key] = []
+
+    def _prepare_export_csv_with_headers(self, model_class):
+        """
+        Подготовка CSV массива данных для COPY FROM
+        """
+        model_key = model_class._meta.label
+
+        csv_data = StringIO()
+
+        header = [field.column for field in model_class._meta.fields]
+
+        writer = DictWriter(csv_data, fieldnames=header, delimiter='\t')
+
+        for item in self._pg_copy_create_queues[model_key]:
+            item_data = item.__dict__.copy()
+
+            if '_state' in item_data.keys():
+                del item_data['_state']
+
+            writer.writerow(item_data)
+
+        csv_data.seek(0)
+
+        return csv_data, header
+
+    def _check_for_text_fields(self, model_class):
+        """
+        Если в модели есть текстовые поля, то с большой вероятностью COPY их импортирует криво. Нужно переключаться
+        в режим bulk_create
+        """
+        model_key = model_class._meta.label
+
+        for field in model_class._meta.get_fields():
+            if isinstance(field, models.CharField):
+                logger.info(f'Detected text field in model {model_key}, using bulk create instead of PG COPY')
+
+                return True
+
+        return False
+
+    def _check_for_cursor(self):
+        """
+        На тестовых средах у нас может не быть постгрескла и copy_from. В этом случае тоже нужен фоллбэк.
+        """
+        return hasattr(connection.cursor(), 'copy_from')
+
+    def _move_to_bulk_create(self, model_class):
+        """
+        Перемещение всех записей из очереди на загрузку через COPY FROM в очредь на загрузку через bulk_create
+        """
+        model_key = model_class._meta.label
+
+        self._bulk_create_queues[model_key] = self._pg_copy_create_queues[model_key].copy()
+
+        self._pg_copy_create_queues[model_key] = []
 
 
 def guess_wb_article(item):
