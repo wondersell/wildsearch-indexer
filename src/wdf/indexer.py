@@ -90,7 +90,7 @@ class Indexer(object):
 
         self.marketplace_model = self.get_marketplace_model(self.spider_slug)
         self.sh_client = ScrapinghubClient(settings.SH_APIKEY)
-        self.bulk_manager = BulkCreateManager()
+        self.bulk_manager = BulkCreateManager(copy_safe_models=('wdf.Sku'))
 
         self.catalogs_cache = {}
         self.brands_cache = {}
@@ -466,7 +466,9 @@ class BulkCreateManager(object):
     Не буду выносить отдельным модулем – слишком много специфики процесса загрузки наших данных.
     """
 
-    def __init__(self):
+    def __init__(self, copy_safe_models=()):
+        self._copy_safe_models = copy_safe_models
+
         self._pg_copy_create_queues = defaultdict(list)
         self._bulk_create_queues = defaultdict(list)
 
@@ -528,17 +530,16 @@ class BulkCreateManager(object):
             импортировать через bulk_create (обычно помогает)
             """
             line_number = int(re.findall(r'line (\d+)', str(error))[0])
-            logger.error(f'Copy to table {model_class._meta.db_table} failed: {error}')
-            logger.error(f'Detected line number: {line_number}')
-            logger.error(f'Contents of row #{line_number}: {self._pg_copy_create_queues[model_key][line_number - 1].__dict__}')
+
+            logger.error(f'Copy to table {model_class._meta.db_table} failed for row {line_number}: {self._pg_copy_create_queues[model_key][line_number - 1].__dict__}')
 
             self._bulk_create_queues[model_key].append(self._pg_copy_create_queues[model_key].pop(line_number - 1))
+
+            logger.info(f'Retrying COPY to table {model_class._meta.db_table} without problem row')
 
             connection.rollback()
 
             cursor.close()
-
-            logger.info(f'Retrying COPY to table {model_class._meta.db_table} without problem row')
 
             self._commit(model_class)
         else:
@@ -588,6 +589,9 @@ class BulkCreateManager(object):
         в режим bulk_create
         """
         model_key = model_class._meta.label
+
+        if model_key in self._copy_safe_models:
+            return False
 
         for field in model_class._meta.get_fields():
             if isinstance(field, models.CharField):
