@@ -47,7 +47,7 @@ class Dump(models.Model):
 class Version(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
     dump = models.ForeignKey('Dump', on_delete=models.CASCADE, null=True)
-    sku = models.ForeignKey('Sku', on_delete=models.CASCADE)
+    sku = models.ForeignKey('Sku', on_delete=models.CASCADE, null=True)
     catalog_level = models.IntegerField(null=True)
     crawled_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -63,7 +63,7 @@ class Version(models.Model):
 class Sku(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
     title = models.CharField(max_length=512)
-    marketplace = models.ForeignKey('DictMarketplace', on_delete=models.CASCADE)
+    marketplace = models.ForeignKey('DictMarketplace', on_delete=models.CASCADE, null=True)
     brand = models.ForeignKey('DictBrand', on_delete=models.CASCADE, null=True, default=None)
     article = models.CharField(max_length=20)
     url = models.URLField()
@@ -84,8 +84,8 @@ class Sku(models.Model):
 
 class Price(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
-    sku = models.ForeignKey('Sku', on_delete=models.CASCADE)
-    version = models.ForeignKey('Version', on_delete=models.CASCADE)
+    sku = models.ForeignKey('Sku', on_delete=models.CASCADE, null=True)
+    version = models.ForeignKey('Version', on_delete=models.CASCADE, null=True)
     price = models.FloatField()
     price_dirty = models.FloatField(null=True)
     discount = models.FloatField(default=0.0)
@@ -105,8 +105,8 @@ class Price(models.Model):
 
 class Rating(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
-    sku = models.ForeignKey('Sku', on_delete=models.CASCADE)
-    version = models.ForeignKey('Version', on_delete=models.CASCADE)
+    sku = models.ForeignKey('Sku', on_delete=models.CASCADE, null=True)
+    version = models.ForeignKey('Version', on_delete=models.CASCADE, null=True)
     rating = models.FloatField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -124,8 +124,8 @@ class Rating(models.Model):
 
 class Sales(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
-    sku = models.ForeignKey('Sku', on_delete=models.CASCADE)
-    version = models.ForeignKey('Version', on_delete=models.CASCADE)
+    sku = models.ForeignKey('Sku', on_delete=models.CASCADE, null=True)
+    version = models.ForeignKey('Version', on_delete=models.CASCADE, null=True)
     sales = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -144,8 +144,8 @@ class Sales(models.Model):
 class Position(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
     sku = models.ForeignKey('Sku', on_delete=models.CASCADE)
-    version = models.ForeignKey('Version', on_delete=models.CASCADE)
-    catalog = models.ForeignKey('DictCatalog', on_delete=models.CASCADE)
+    version = models.ForeignKey('Version', on_delete=models.CASCADE, null=True)
+    catalog = models.ForeignKey('DictCatalog', on_delete=models.CASCADE, null=True)
     absolute = models.PositiveIntegerField()
     percintile = models.FloatField(null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -164,8 +164,8 @@ class Position(models.Model):
 
 class Seller(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
-    sku = models.ForeignKey('Sku', on_delete=models.CASCADE)
-    seller = models.ForeignKey('DictSeller', on_delete=models.CASCADE)
+    sku = models.ForeignKey('Sku', on_delete=models.CASCADE, null=True)
+    seller = models.ForeignKey('DictSeller', on_delete=models.CASCADE, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -178,8 +178,8 @@ class Seller(models.Model):
 
 class Reviews(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
-    sku = models.ForeignKey('Sku', on_delete=models.CASCADE)
-    version = models.ForeignKey('Version', on_delete=models.CASCADE)
+    sku = models.ForeignKey('Sku', on_delete=models.CASCADE, null=True)
+    version = models.ForeignKey('Version', on_delete=models.CASCADE, null=True)
     reviews = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -197,9 +197,9 @@ class Reviews(models.Model):
 
 class Parameter(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
-    sku = models.ForeignKey('Sku', on_delete=models.CASCADE)
-    version = models.ForeignKey('Version', on_delete=models.CASCADE)
-    parameter = models.ForeignKey('DictParameter', on_delete=models.CASCADE)
+    sku = models.ForeignKey('Sku', on_delete=models.CASCADE, null=True)
+    version = models.ForeignKey('Version', on_delete=models.CASCADE, null=True)
+    parameter = models.ForeignKey('DictParameter', on_delete=models.CASCADE, null=True)
     value = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 

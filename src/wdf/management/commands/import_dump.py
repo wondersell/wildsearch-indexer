@@ -10,8 +10,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('job_id', type=str)
-        parser.add_argument('--save_chunk_size', type=int, default=1000, required=False)
-        parser.add_argument('--get_chunk_size', type=int, default=1000, required=False)
+        parser.add_argument('--chunk_size', type=int, default=5000, required=False)
         parser.add_argument('--background', choices=['yes', 'no'], default='yes')
 
     def handle(self, *args, **options):
@@ -27,5 +26,5 @@ class Command(BaseCommand):
             import_dump.delay(job_id=job_id)
             self.stdout.write(self.style.SUCCESS(f'Job #{job_id} added to process queue for import'))
         else:
-            indexer = Indexer(get_chunk_size=options['get_chunk_size'], save_chunk_size=options['save_chunk_size'])
+            indexer = Indexer(get_chunk_size=options['chunk_size'])
             indexer.import_dump(job_id=options['job_id'])
