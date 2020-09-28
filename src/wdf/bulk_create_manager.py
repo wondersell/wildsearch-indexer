@@ -82,8 +82,8 @@ class BulkCreateManager(object):
 
         chunk_no = 1
 
-        for slice in slices:
-            export_file, header = self._prepare_export_csv_with_headers(slice, model_class)
+        for _slice in slices:
+            export_file, header = self._prepare_export_csv_with_headers(_slice, model_class)
 
             cursor = connection.cursor()
 
@@ -97,7 +97,7 @@ class BulkCreateManager(object):
                 time_spent = time.time() - start_time
 
                 logger.info(
-                    f'{self.log_prefix}(chunk {chunk_no}/{len(slices)}) {model_key} dump saved via PG COPY ({len(slice)} items) in {time_spent}s, {round(len(slice) / time_spent * 60)} items/min')
+                    f'{self.log_prefix}(chunk {chunk_no}/{len(slices)}) {model_key} dump saved via PG COPY ({len(_slice)} items) in {time_spent}s, {round(len(_slice) / time_spent * 60)} items/min')
             except psycopg2.DatabaseError as error:
                 """
                 Иногда у COPY не получается импортировать какую-то строчку просто потому что иди нахуй, вот почему.
@@ -133,15 +133,15 @@ class BulkCreateManager(object):
 
         chunk_no = 1
 
-        for slice in slices:
+        for _slice in slices:
             start_time = time.time()
 
-            model_class.objects.bulk_create(slice)
+            model_class.objects.bulk_create(_slice)
 
             time_spent = time.time() - start_time
 
             logger.info(
-                f'{self.log_prefix}(slice {chunk_no}/{len(slices)}) {model_key} dump saved via bulk_create ({len(slice)} items) in {time_spent}s, {round(len(slice) / time_spent * 60)} items/min')
+                f'{self.log_prefix}(slice {chunk_no}/{len(slices)}) {model_key} dump saved via bulk_create ({len(_slice)} items) in {time_spent}s, {round(len(_slice) / time_spent * 60)} items/min')
 
             chunk_no += 1
 

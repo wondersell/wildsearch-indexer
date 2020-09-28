@@ -26,7 +26,7 @@ def test_split_in_chunks(n_models):
     for model in models:
         manager.add(model)
 
-    chunks = manager._split_in_chunks(manager._pg_copy_create_queues['dummy'])
+    chunks = manager._split_in_slices(manager._pg_copy_create_queues['dummy'])
 
     assert len(chunks) == 4
     assert len(chunks[0]) == 3
