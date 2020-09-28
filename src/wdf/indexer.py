@@ -81,8 +81,8 @@ class Indexer(object):
 
     def __init__(self, get_chunk_size=100, save_chunk_size=None):
         self.spider_slug = 'wb'
-        self.get_chunk_size = get_chunk_size
-        self.save_chunk_size = save_chunk_size or get_chunk_size
+        self.get_chunk_size = int(get_chunk_size)
+        self.save_chunk_size = int(save_chunk_size) if save_chunk_size else int(get_chunk_size)
 
         self.marketplace_model = self.get_marketplace_model(self.spider_slug)
         self.sh_client = ScrapinghubClient(settings.SH_APIKEY)
