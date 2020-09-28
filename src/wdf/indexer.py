@@ -79,13 +79,14 @@ class Indexer(object):
        в этом случае никакого rc не должно быть
     """
 
-    def __init__(self, get_chunk_size=100):
+    def __init__(self, get_chunk_size=100, save_chunk_size=None):
         self.spider_slug = 'wb'
         self.get_chunk_size = get_chunk_size
+        self.save_chunk_size = save_chunk_size or get_chunk_size
 
         self.marketplace_model = self.get_marketplace_model(self.spider_slug)
         self.sh_client = ScrapinghubClient(settings.SH_APIKEY)
-        self.bulk_manager = BulkCreateManager(max_chunk_size=get_chunk_size, copy_safe_models=('wdf.Sku'))
+        self.bulk_manager = BulkCreateManager(max_chunk_size=self.save_chunk_size, copy_safe_models=('wdf.Sku'))
 
         self.catalogs_cache = {}
         self.brands_cache = {}

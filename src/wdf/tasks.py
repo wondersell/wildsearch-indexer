@@ -1,3 +1,4 @@
+import environ
 import logging
 from celery import shared_task
 from requests.exceptions import RequestException
@@ -7,6 +8,9 @@ from wdf.indexer import Indexer
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+env = environ.Env(DEBUG=(bool, False))
+environ.Env.read_env()
 
 
 @shared_task(
@@ -19,7 +23,7 @@ logger.setLevel(logging.INFO)
 def prepare_dump(job_id):
     logger.info(f'Preparing dump for job {job_id}')
 
-    indexer = Indexer(get_chunk_size=5000)
+    indexer = Indexer(get_chunk_size=env('INDEXER_GET_CHUNK_SIZE', 5000), save_chunk_size=('INDEXER_SAVE_CHUNK_SIZE', None))
 
     try:
         indexer.prepare_dump(job_id=job_id)
@@ -41,7 +45,7 @@ def prepare_dump(job_id):
 def import_dump(job_id):
     logger.info(f'Importing dump for job {job_id}')
 
-    indexer = Indexer(get_chunk_size=5000)
+    indexer = Indexer(get_chunk_size=env('INDEXER_GET_CHUNK_SIZE', 5000), save_chunk_size=('INDEXER_SAVE_CHUNK_SIZE', None))
 
     try:
         indexer.import_dump(job_id=job_id)
