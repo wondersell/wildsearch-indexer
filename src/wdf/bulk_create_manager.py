@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 from csv import DictWriter
 from django.apps import apps
-from django.db import connection, models
+from django.db import connection, models, transaction
 from io import StringIO
 
 logger = logging.getLogger('wdf.indexer')
@@ -90,9 +90,8 @@ class BulkCreateManager(object):
             try:
                 start_time = time.time()
 
-                cursor.copy_from(export_file, model_class._meta.db_table, sep='\t', null='', columns=header)
-
-                connection.commit()
+                with transaction.atomic():
+                    cursor.copy_from(export_file, model_class._meta.db_table, sep='\t', null='', columns=header)
 
                 time_spent = time.time() - start_time
 
@@ -112,10 +111,6 @@ class BulkCreateManager(object):
                 self._bulk_create_queues[model_key].append(self._pg_copy_create_queues[model_key].pop(line_number - 1))
 
                 logger.info(f'{self.log_prefix}Retrying COPY to table {model_class._meta.db_table} without problem row')
-
-                connection.rollback()
-
-                cursor.close()
 
                 self._commit(model_class)
             else:
