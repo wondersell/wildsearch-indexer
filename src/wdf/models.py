@@ -146,7 +146,7 @@ class Position(models.Model):
     sku = models.ForeignKey('Sku', on_delete=models.CASCADE)
     version = models.ForeignKey('Version', on_delete=models.CASCADE, null=True)
     catalog = models.ForeignKey('DictCatalog', on_delete=models.CASCADE, null=True)
-    absolute = models.PositiveIntegerField()
+    absolute = models.PositiveIntegerField(null=True)
     percintile = models.FloatField(null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -180,7 +180,7 @@ class Reviews(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
     sku = models.ForeignKey('Sku', on_delete=models.CASCADE, null=True)
     version = models.ForeignKey('Version', on_delete=models.CASCADE, null=True)
-    reviews = models.IntegerField()
+    reviews = models.IntegerField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -272,7 +272,7 @@ class DictCatalog(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # noqa: VNE003
     marketplace = models.ForeignKey('DictMarketplace', on_delete=models.CASCADE)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, default=None)
-    name = models.CharField(max_length=255, blank=True, default='')
+    name = models.TextField(null=True)
     url = models.URLField()
     level = models.IntegerField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)

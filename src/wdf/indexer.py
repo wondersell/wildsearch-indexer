@@ -282,7 +282,7 @@ class Indexer(object):
             self.bulk_manager.add(Reviews(
                 sku_id=self.skus_cache[item['wb_id']],
                 version=version,
-                reviews=item['wb_reviews_count'],
+                reviews= 0 if item['wb_reviews_count'] == '' else item['wb_reviews_count'],
                 created_at=timezone.now(),
             ))
 
@@ -320,7 +320,7 @@ class Indexer(object):
             self.catalogs_retrieved[item['wb_category_url']] = {
                 'marketplace': self.marketplace_model.id,
                 'parent': '',
-                'name': item['wb_category_name'] if 'wb_category_name' in item.keys() else None,
+                'name': item['wb_category_name'] if 'wb_category_name' in item.keys() else item['wb_category_url'],
                 'url': item['wb_category_url'] if 'wb_category_url' in item.keys() else None,
                 'level': 1,
             }

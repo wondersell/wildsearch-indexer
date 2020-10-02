@@ -108,6 +108,8 @@ class BulkCreateManager(object):
                 logger.error(
                     f'{self.log_prefix}Copy to table {model_class._meta.db_table} failed for row {line_number}: {self._pg_copy_create_queues[model_key][line_number - 1].__dict__}')
 
+                logger.error(str(error))
+
                 self._bulk_create_queues[model_key].append(self._pg_copy_create_queues[model_key].pop(line_number - 1))
 
                 logger.info(f'{self.log_prefix}Retrying COPY to table {model_class._meta.db_table} without problem row')
