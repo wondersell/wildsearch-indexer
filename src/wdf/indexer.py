@@ -282,7 +282,7 @@ class Indexer(object):
             self.bulk_manager.add(Reviews(
                 sku_id=self.skus_cache[item['wb_id']],
                 version=version,
-                reviews= 0 if item['wb_reviews_count'] == '' else item['wb_reviews_count'],
+                reviews=0 if item['wb_reviews_count'] == '' else item['wb_reviews_count'],
                 created_at=timezone.now(),
             ))
 
