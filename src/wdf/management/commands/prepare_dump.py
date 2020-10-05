@@ -24,7 +24,7 @@ class Command(BaseCommand):
 
         job_id = options['job_id']
 
-        if options['background']:
+        if options['background'] == 'yes':
             prepare_dump.delay(job_id=job_id)
             self.stdout.write(self.style.SUCCESS(f'Job #{job_id} added to process queue for preparing'))
         else:
