@@ -123,16 +123,13 @@ class Indexer(object):
 
         dump = self.get_or_save_dump(self.spider_slug, job_id)
 
-        if dump.state_code > 10:
+        if dump.state_code > 25:
             raise DumpStateTooLateError(f'Wrong dump state code ({dump.state_code} – {dump.state}) for importing dump, too late')
 
         dump.set_state(Dump.PROCESSING)
         dump.save()
 
         self.process_batch(generator=generator, dump=dump, save_versions=True)
-
-        dump.set_state(Dump.PROCESSED)
-        dump.save()
 
         return self
 

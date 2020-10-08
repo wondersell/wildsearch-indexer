@@ -1,5 +1,6 @@
 import environ
 import logging
+import sys
 from celery import shared_task
 from requests.exceptions import RequestException
 
@@ -42,13 +43,13 @@ def prepare_dump(job_id):
         'countdown': 100,
     },
 )
-def import_dump(job_id):
-    logger.info(f'Importing dump for job {job_id}')
+def import_dump(job_id, start=0, count=sys.maxsize):
+    logger.info(f'Importing dump for job {job_id} from item {start}, {count} items max')
 
     indexer = Indexer(get_chunk_size=env('INDEXER_GET_CHUNK_SIZE'), save_chunk_size=env('INDEXER_SAVE_CHUNK_SIZE'))
 
     try:
-        indexer.import_dump(job_id=job_id)
+        indexer.import_dump(job_id=job_id, start=start, count=count)
     except DumpStateTooLateError as e:
         logger.error(f'Job {job_id} import failed. {str(e)}')
     else:
