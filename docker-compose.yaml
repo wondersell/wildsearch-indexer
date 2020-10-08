@@ -22,7 +22,7 @@ services:
   worker:
     build: ./src
     restart: always
-    command: celery -A app worker --concurrency=1
+    command: celery -A app worker --concurrency=7
     volumes:
       - ./src:/srv:delegated
       #- ../seller-stats/seller_stats:/usr/local/lib/python3.8/site-packages/seller-stats:delegated
