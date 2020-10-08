@@ -16,7 +16,7 @@ class Command(BaseCommand):
         logger = logging.getLogger('')
         logger.addHandler(console)
 
-        unfilled_dumps = Dump.objects.annotate(num_versions=Count('version', distinct=True), versions_diff=F('items_crawled') - Count('version', distinct=True)).filter(versions_diff__gte=0).order_by('job')
+        unfilled_dumps = Dump.objects.annotate(num_versions=Count('version', distinct=True), versions_diff=F('items_crawled') - Count('version', distinct=True)).filter(versions_diff__gt=0).order_by('job')
 
         for unfilled in unfilled_dumps:
             self.stdout.write(self.style.SUCCESS(f'Dump {unfilled.job} unfilled: {unfilled.num_versions} versions instead of {unfilled.items_crawled} ({unfilled.versions_diff} diff), deleting'))
