@@ -428,6 +428,7 @@ def test_prepare_dump_changes_state(dump_sample):
     assert dump.state_code == Dump.PREPARED
 
 
+@pytest.mark.skip(reason="Отключено до тех пор, пока не будет реализована смена статуса после выполнения параллельных импортов")
 @pytest.mark.django_db
 def test_import_dump_changes_state(dump_sample):
     dump_sample(state=Dump.PREPARED, job_id='12345/123/12345', crawler='wb')
@@ -484,9 +485,6 @@ def test_import_existing_dump_correct(dump_sample):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize('state_code', [
-    Dump.SCHEDULING,
-    Dump.SCHEDULED,
-    Dump.PROCESSING,
     Dump.PROCESSED,
 ])
 def test_import_existing_dump_incorrect(state_code, dump_sample):
@@ -503,7 +501,6 @@ def test_import_existing_dump_incorrect(state_code, dump_sample):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize('state_code', [
-    Dump.PROCESSING,
     Dump.PROCESSED,
 ])
 def test_import_existing_dump_too_late(state_code, dump_sample):
