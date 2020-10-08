@@ -428,7 +428,7 @@ def test_prepare_dump_changes_state(dump_sample):
     assert dump.state_code == Dump.PREPARED
 
 
-@pytest.mark.skip(reason="Отключено до тех пор, пока не будет реализована смена статуса после выполнения параллельных импортов")
+@pytest.mark.skip(reason='Отключено до тех пор, пока не будет реализована смена статуса после выполнения параллельных импортов')
 @pytest.mark.django_db
 def test_import_dump_changes_state(dump_sample):
     dump_sample(state=Dump.PREPARED, job_id='12345/123/12345', crawler='wb')
