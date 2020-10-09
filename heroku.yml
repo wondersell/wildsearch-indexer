@@ -15,5 +15,5 @@ run:
     image: indexer
   worker:
     command:
-      - celery -A app worker --concurrency=7 -Ofair
+      - celery -A app worker --concurrency=4 -Ofair
     image: indexer
