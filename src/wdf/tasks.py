@@ -31,7 +31,7 @@ def prepare_dump(job_id):
     except DumpStateTooLateError as e:
         logger.error(f'Job {job_id} import failed. {str(e)}')
     else:
-        logger.info(f'Dump for job {job_id} prepared, adding import task')
+        logger.info(f'Dump for job {job_id} prepared')
 
 
 @shared_task(
