@@ -33,8 +33,6 @@ def prepare_dump(job_id):
     else:
         logger.info(f'Dump for job {job_id} prepared, adding import task')
 
-        import_dump.delay(job_id=job_id)
-
 
 @shared_task(
     autoretry_for=[DumpStateTooEarlyError],
