@@ -1,9 +1,9 @@
 import logging
 from django.core.management.base import BaseCommand
 from django.db.models import Count, F
-from wdf.tasks import prune_dump
 
 from wdf.models import Dump
+from wdf.tasks import prune_dump
 
 
 class Command(BaseCommand):
