@@ -1,5 +1,5 @@
 import uuid
-from django.db import models
+from django.db import connection, models
 
 
 class Dump(models.Model):
@@ -35,6 +35,36 @@ class Dump(models.Model):
     def set_state(self, state_code):
         self.state_code = state_code
         self.state = [item[1] for item in self.State_codes if item[0] == state_code][0].lower()
+
+    def prune(self):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                'delete from wdf_parameter where version_id in (select id from wdf_version where dump_id=%s);',
+                [self.id])
+
+            cursor.execute(
+                'delete from wdf_position where version_id in (select id from wdf_version where dump_id=%s);',
+                [self.id])
+
+            cursor.execute(
+                'delete from wdf_price where version_id in (select id from wdf_version where dump_id=%s);',
+                [self.id])
+
+            cursor.execute(
+                'delete from wdf_rating where version_id in (select id from wdf_version where dump_id=%s);',
+                [self.id])
+
+            cursor.execute(
+                'delete from wdf_reviews where version_id in (select id from wdf_version where dump_id=%s);',
+                [self.id])
+
+            cursor.execute(
+                'delete from wdf_sales where version_id in (select id from wdf_version where dump_id=%s);',
+                [self.id])
+
+            cursor.execute('delete from wdf_version where dump_id=%s;', [self.id])
+
+        return self.delete()
 
     class Meta:
         db_table = 'wdf_dump'

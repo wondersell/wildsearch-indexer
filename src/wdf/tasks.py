@@ -6,6 +6,7 @@ from requests.exceptions import RequestException
 
 from wdf.exceptions import DumpStateTooEarlyError, DumpStateTooLateError
 from wdf.indexer import Indexer
+from wdf.models import Dump
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -33,6 +34,8 @@ def prepare_dump(job_id):
     else:
         logger.info(f'Dump for job {job_id} prepared')
 
+        return True
+
 
 @shared_task(
     autoretry_for=[DumpStateTooEarlyError],
@@ -52,3 +55,17 @@ def import_dump(job_id, start=0, count=sys.maxsize):
         logger.error(f'Job {job_id} import failed. {str(e)}')
     else:
         logger.info(f'Dump for job {job_id} imported')
+
+        return True
+
+
+@shared_task(retry_kwargs={
+    'max_retries': 10,
+    'countdown': 100,
+})
+def prune_dump(job_id):
+    dump = Dump.objects.filter(job=job_id).first()
+
+    dump.prune()
+
+    return True

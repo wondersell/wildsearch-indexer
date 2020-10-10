@@ -41,7 +41,7 @@ services:
   flower:
     build: ./src
     restart: always
-    command: celery -A app flower --port=5555
+    command: flower -A app --port=5555
     volumes:
       - ./src:/srv:delegated
     links:
