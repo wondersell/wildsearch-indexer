@@ -68,7 +68,7 @@ def wrap_dump(results, job_id):
 
     try:
         indexer.wrap_dump()
-    except Exception as e:
+    except Exception as e:  # noqa: PIE786
         logger.info(f'Dump for job {job_id} wrapping failed. {str(e)}')
     else:
         logger.info(f'Dump for job {job_id} wrapped up')
