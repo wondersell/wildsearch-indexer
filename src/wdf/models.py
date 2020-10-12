@@ -3,6 +3,7 @@ from django.db import connection, models
 
 
 class Dump(models.Model):
+    ERROR = -1
     CREATED = 0
     PREPARING = 5
     PREPARED = 10
@@ -12,6 +13,7 @@ class Dump(models.Model):
     PROCESSED = 30
 
     State_codes = (
+        (ERROR, 'Error'),
         (CREATED, 'Created'),
         (PREPARING, 'Preparing'),
         (PREPARED, 'Prepared'),
@@ -25,11 +27,11 @@ class Dump(models.Model):
     crawler = models.CharField(max_length=20)
     job = models.CharField(max_length=20)
     job_type = models.CharField(max_length=20, blank=True, default='')
-    state = models.CharField(max_length=20, blank=True, default='')
+    state = models.CharField(max_length=20, blank=True, default='created')
     state_code = models.IntegerField(choices=State_codes, default=CREATED)
     items_crawled = models.IntegerField(null=True)
-    crawl_started_at = models.DateTimeField()
-    crawl_ended_at = models.DateTimeField()
+    crawl_started_at = models.DateTimeField(null=True)
+    crawl_ended_at = models.DateTimeField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def set_state(self, state_code):
@@ -65,6 +67,9 @@ class Dump(models.Model):
             cursor.execute('delete from wdf_version where dump_id=%s;', [self.id])
 
         return self.delete()
+
+    def get_versions_num(self):
+        return Version.objects.filter(dump_id=self.id).count()
 
     class Meta:
         db_table = 'wdf_dump'

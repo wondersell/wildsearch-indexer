@@ -14,8 +14,13 @@ def current_path():
 
 
 @pytest.fixture()
-def indexer():
-    return Indexer()
+def indexer(dump_sample):
+    def _indexer():
+        _dump_sample = dump_sample()
+
+        return Indexer(job_id=_dump_sample.job)
+
+    return _indexer
 
 
 @pytest.fixture()
@@ -39,6 +44,8 @@ def item_sample(items_sample):
 
 @pytest.fixture()
 def indexer_filled(indexer, items_sample):
+    indexer = indexer()
+
     for item in items_sample:
         indexer.collect_all(item)
 
@@ -94,10 +101,10 @@ def dict_parameter_sample():
 
 
 @pytest.fixture()
-def _fill_db(indexer_filled_with_caches, items_sample, dump_sample):
+def _fill_db(items_sample, dump_sample):
     dump_sample = dump_sample()
-
-    indexer_filled_with_caches.process_batch([items_sample], dump_sample, save_versions=True)
+    indexer = Indexer(dump_sample.job)
+    indexer.process_batch([items_sample], save_versions=True)
 
 
 @pytest.fixture(autouse=True)

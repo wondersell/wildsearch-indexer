@@ -1,3 +1,4 @@
+import environ
 import logging
 import pytz
 import re
@@ -11,10 +12,13 @@ from django.utils import timezone
 from scrapinghub import ScrapinghubClient
 
 from wdf.bulk_create_manager import BulkCreateManager
-from wdf.exceptions import DumpStateTooLateError
+from wdf.exceptions import DumpCorruptedError, DumpStateTooLateError
 from wdf.models import (
     DictBrand, DictCatalog, DictMarketplace, DictParameter, Dump, Parameter, Position, Price, Rating, Reviews, Sales,
     Sku, Version)
+
+env = environ.Env(DEBUG=(bool, False))
+environ.Env.read_env()
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -79,12 +83,14 @@ class Indexer(object):
        в этом случае никакого rc не должно быть
     """
 
-    def __init__(self, get_chunk_size=100, save_chunk_size=None):
+    def __init__(self, job_id):
         self.spider_slug = 'wb'
-        self.get_chunk_size = int(get_chunk_size)
-        self.save_chunk_size = int(save_chunk_size) if save_chunk_size else int(get_chunk_size)
+        self.get_chunk_size = env('INDEXER_GET_CHUNK_SIZE', cast=int)
+        self.save_chunk_size = env('INDEXER_SAVE_CHUNK_SIZE', cast=int)
 
-        self.marketplace_model = self.get_marketplace_model(self.spider_slug)
+        self.marketplace, new_marketplace = DictMarketplace.objects.get_or_create(name=self.spider_slug, slug=self.spider_slug)
+        self.dump, new_dump = Dump.objects.get_or_create(job=job_id, crawler=self.spider_slug)
+
         self.sh_client = ScrapinghubClient(settings.SH_APIKEY)
         self.bulk_manager = BulkCreateManager(max_chunk_size=self.save_chunk_size)
 
@@ -100,47 +106,70 @@ class Indexer(object):
 
         self.log_prefix = ''
 
-    def prepare_dump(self, job_id):
-        generator = self.get_generator(job_id=job_id, chunk_size=self.get_chunk_size)
+        if new_dump or self.dump.items_crawled is None or self.dump.crawl_ended_at is None or self.dump.crawl_ended_at is None:
+            self.load_dump_stats(self.dump)
 
-        dump = self.get_or_save_dump(self.spider_slug, job_id)
-
-        if dump.state_code > 0:
-            raise DumpStateTooLateError(f'Wrong dump state code ({dump.state_code} – {dump.state}) for preparing dump, too late')
-
-        dump.set_state(Dump.PREPARING)
-        dump.save()
-
-        self.process_batch(generator=generator, dump=dump, save_versions=False)
-
-        dump.set_state(Dump.PREPARED)
-        dump.save()
+    def set_chunk_size_save(self, size):
+        self.save_chunk_size = size
 
         return self
 
-    def import_dump(self, job_id, start=0, count=sys.maxsize):
-        generator = self.get_generator(job_id=job_id, start=start, count=count, chunk_size=self.get_chunk_size)
-
-        dump = self.get_or_save_dump(self.spider_slug, job_id)
-
-        if dump.state_code > 25:
-            raise DumpStateTooLateError(f'Wrong dump state code ({dump.state_code} – {dump.state}) for importing dump, too late')
-
-        dump.set_state(Dump.PROCESSING)
-        dump.save()
-
-        self.process_batch(generator=generator, dump=dump, save_versions=True)
+    def set_chunk_size_get(self, size):
+        self.get_chunk_size = size
 
         return self
 
-    def process_batch(self, generator, dump, save_versions=False):
+    def prepare_dump(self):
+        generator = self.get_generator(chunk_size=self.get_chunk_size)
+
+        if self.dump.state_code > 0:
+            logger.info(f'Dump already prepared (state code {self.dump.state_code} – {self.dump.state}), skipping prepare step')
+
+            return self
+
+        self.dump.set_state(Dump.PREPARING)
+        self.dump.save()
+
+        self.process_batch(generator=generator, save_versions=False)
+
+        self.dump.set_state(Dump.PREPARED)
+        self.dump.save()
+
+        return self
+
+    def import_dump(self, start=0, count=sys.maxsize):
+        generator = self.get_generator(start=start, count=count, chunk_size=self.get_chunk_size)
+
+        if self.dump.state_code > 25:
+            raise DumpStateTooLateError(f'Wrong dump state code ({self.dump.state_code} – {self.dump.state}) for importing dump, too late')
+
+        self.dump.set_state(Dump.PROCESSING)
+        self.dump.save()
+
+        self.process_batch(generator=generator, save_versions=True)
+
+        return self
+
+    def wrap_dump(self):
+        versions_num = self.dump.get_versions_num()
+
+        if versions_num > self.dump.items_crawled:
+            raise DumpCorruptedError('Dump has more versions than job')
+
+        if versions_num < self.dump.items_crawled:
+            raise DumpCorruptedError('Dump has less versions than job')
+
+        self.dump.set_state(Dump.PROCESSED)
+        self.dump.save()
+
+    def process_batch(self, generator, save_versions=False):
         overall_start_time = time.time()
 
         chunk_no = 1
         items_count = 0
 
         for chunk in generator:
-            self.log_prefix = f'Job {dump.job}, chunk #{chunk_no}: '
+            self.log_prefix = f'Job {self.dump.job}, chunk #{chunk_no}: '
 
             try:
                 start_time = time.time()
@@ -157,7 +186,7 @@ class Indexer(object):
                 self.update_all_caches(self.catalogs_retrieved, self.brands_retrieved, self.parameters_retrieved, self.skus_retrieved)
 
                 if save_versions:
-                    self.save_all(dump, chunk)
+                    self.save_all(chunk)
 
                     self.bulk_manager.done(log_prefix=self.log_prefix)
 
@@ -170,7 +199,7 @@ class Indexer(object):
                 # В основном для отладки через систему команд Django
                 overall_time_spent = time.time() - overall_start_time
 
-                logger.info(f'{dump} ({dump.job}) processed in {overall_time_spent}s, {round(items_count / overall_time_spent * 60)} items/min')
+                logger.info(f'{self.dump} ({self.dump.job}) processed in {overall_time_spent}s, {round(items_count / overall_time_spent * 60)} items/min')
 
                 raise SystemExit(0)
 
@@ -180,22 +209,21 @@ class Indexer(object):
 
         return self
 
-    def get_generator(self, job_id, chunk_size=500, start=0, count=sys.maxsize):
-        return self.sh_client.get_job(job_id).items.list_iter(chunksize=chunk_size, start=start, count=count)
+    def get_generator(self, chunk_size=500, start=0, count=sys.maxsize):
+        return self.sh_client.get_job(self.dump.job).items.list_iter(chunksize=chunk_size, start=start, count=count)
 
-    def get_marketplace_model(self, spider_slug):
-        try:
-            marketplace_model = DictMarketplace.objects.get(slug=spider_slug)
-        except DictMarketplace.DoesNotExist:
-            marketplace_model = DictMarketplace(name=spider_slug, slug=spider_slug)
+    def load_dump_stats(self, dump_model):
+        job_metadata = self.sh_client.get_job(dump_model.job).metadata
 
-            marketplace_model.save()
+        dump_model.crawl_started_at = pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('running_time') / 1000))
+        dump_model.crawl_ended_at = pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('finished_time') / 1000))
+        dump_model.items_crawled = job_metadata.get('scrapystats')['item_scraped_count']
 
-        return marketplace_model
+        dump_model.save()
 
-    def save_all(self, dump, chunk):
+    def save_all(self, chunk):
         for item in chunk:
-            version = self.save_version(dump=dump, item=item)
+            version = self.save_version(item=item)
 
             self.save_price(version, item)
             self.save_rating(version, item)
@@ -206,28 +234,9 @@ class Indexer(object):
 
         self.bulk_manager.done(log_prefix=self.log_prefix)
 
-    def get_or_save_dump(self, spider_slug, job_id):
-        if Dump.objects.filter(job=job_id).count() > 0:
-            dump = Dump.objects.filter(job=job_id).first()
-        else:
-            job_metadata = self.sh_client.get_job(job_id).metadata
-
-            dump = Dump(
-                crawler=spider_slug,
-                job=job_id,
-                crawl_started_at=pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('running_time') / 1000)),
-                crawl_ended_at=pytz.utc.localize(datetime.fromtimestamp(job_metadata.get('finished_time') / 1000)),
-                state='processing',
-                items_crawled=job_metadata.get('scrapystats')['item_scraped_count'],
-            )
-
-            dump.save()
-
-        return dump
-
-    def save_version(self, dump, item):
+    def save_version(self, item):
         version = Version(
-            dump=dump,
+            dump=self.dump,
             sku_id=self.skus_cache[item['wb_id']],
             crawled_at=pytz.utc.localize(date_parse(item['parse_date'])),
             created_at=timezone.now(),
@@ -315,7 +324,7 @@ class Indexer(object):
     def collect_wb_catalogs(self, item):
         if 'wb_category_url' in item.keys():
             self.catalogs_retrieved[item['wb_category_url']] = {
-                'marketplace': self.marketplace_model.id,
+                'marketplace': self.marketplace.id,
                 'parent': '',
                 'name': item['wb_category_name'] if 'wb_category_name' in item.keys() else item['wb_category_url'],
                 'url': item['wb_category_url'] if 'wb_category_url' in item.keys() else None,
@@ -325,7 +334,7 @@ class Indexer(object):
     def collect_wb_brands(self, item):
         if 'wb_brand_url' in item.keys():
             self.brands_retrieved[item['wb_brand_url']] = {
-                'marketplace': self.marketplace_model.id,
+                'marketplace': self.marketplace.id,
                 'name': item['wb_brand_name'] if 'wb_brand_name' in item.keys() else None,
                 'url': item['wb_brand_url'] if 'wb_brand_url' in item.keys() else None,
             }
@@ -334,14 +343,14 @@ class Indexer(object):
         if 'features' in item.keys():
             for feature_name, _feature_value in item['features'][0].items():
                 self.parameters_retrieved[feature_name] = {
-                    'marketplace': self.marketplace_model.id,
+                    'marketplace': self.marketplace.id,
                     'name': feature_name,
                 }
 
     def collect_wb_skus(self, item):
         self.skus_retrieved[item['wb_id']] = {
             'parse_date': item['parse_date'],
-            'marketplace': self.marketplace_model.id,
+            'marketplace': self.marketplace.id,
             'brand': item['wb_brand_url'] if 'wb_brand_url' in item.keys() else None,
             'article': guess_wb_article(item),
             'url': item['product_url'],

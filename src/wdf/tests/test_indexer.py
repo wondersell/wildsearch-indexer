@@ -10,12 +10,16 @@ from wdf.models import DictCatalog, Dump, Parameter, Position, Price, Rating, Re
 
 @pytest.mark.django_db
 def test_indexer_init(indexer):
+    indexer = indexer()
+
     from scrapinghub import ScrapinghubClient
     assert isinstance(indexer.sh_client, ScrapinghubClient)
 
 
 @pytest.mark.django_db
 def test_collect_wb_catalogs_correct(indexer, item_sample):
+    indexer = indexer()
+
     indexer.collect_wb_catalogs(item_sample)
 
     collected = indexer.catalogs_retrieved['https://www.wildberries.ru/promotions/dlya-pitomtsev/kovriki-dlya-lotkov']
@@ -30,6 +34,8 @@ def test_collect_wb_catalogs_correct(indexer, item_sample):
 
 @pytest.mark.django_db
 def test_collect_wb_catalogs_empty_category(indexer, item_sample):
+    indexer = indexer()
+
     item_sample.pop('wb_category_url', None)
 
     indexer.collect_wb_catalogs(item_sample)
@@ -39,6 +45,8 @@ def test_collect_wb_catalogs_empty_category(indexer, item_sample):
 
 @pytest.mark.django_db
 def test_collect_wb_brands_correct(indexer, item_sample):
+    indexer = indexer()
+
     indexer.collect_wb_brands(item_sample)
 
     collected = indexer.brands_retrieved['https://www.wildberries.ru/brands/vita-famoso']
@@ -51,6 +59,8 @@ def test_collect_wb_brands_correct(indexer, item_sample):
 
 @pytest.mark.django_db
 def test_collect_wb_brands_empty(indexer, item_sample):
+    indexer = indexer()
+
     item_sample.pop('wb_brand_url', None)
 
     indexer.collect_wb_brands(item_sample)
@@ -60,6 +70,8 @@ def test_collect_wb_brands_empty(indexer, item_sample):
 
 @pytest.mark.django_db
 def test_collect_wb_skus_correct(indexer, item_sample):
+    indexer = indexer()
+
     indexer.collect_wb_skus(item_sample)
 
     collected = indexer.skus_retrieved['11743005']
@@ -75,6 +87,8 @@ def test_collect_wb_skus_correct(indexer, item_sample):
 
 @pytest.mark.django_db
 def test_collect_parameters_correct(indexer, item_sample):
+    indexer = indexer()
+
     indexer.collect_wb_parameters(item_sample)
 
     assert len(indexer.parameters_retrieved) == 10
@@ -83,6 +97,8 @@ def test_collect_parameters_correct(indexer, item_sample):
 
 @pytest.mark.django_db
 def test_collect_all(indexer, item_sample):
+    indexer = indexer()
+
     indexer.collect_all(item_sample)
 
     assert len(indexer.skus_retrieved) == 1
@@ -93,6 +109,8 @@ def test_collect_all(indexer, item_sample):
 
 @pytest.mark.django_db
 def test_clear_retrieved(indexer, item_sample):
+    indexer = indexer()
+
     indexer.collect_all(item_sample)
     indexer.clear_retrieved()
 
@@ -104,6 +122,8 @@ def test_clear_retrieved(indexer, item_sample):
 
 @pytest.mark.django_db
 def test_filter_items_not_found_empty_cache(indexer, items_sample):
+    indexer = indexer()
+
     for item in items_sample:
         indexer.collect_all(item)
 
@@ -126,6 +146,8 @@ def test_filter_items_not_found_filled_cache(indexer_filled, items_sample):
 
 @pytest.mark.django_db
 def test_update_catalogs_cache_empty_cache(indexer, item_sample):
+    indexer = indexer()
+
     indexer.collect_all(item_sample)
 
     indexer.update_catalogs_cache(indexer.catalogs_retrieved)
@@ -135,6 +157,8 @@ def test_update_catalogs_cache_empty_cache(indexer, item_sample):
 
 @pytest.mark.django_db
 def test_update_catalogs_cache_filled_cache_with_object(indexer, item_sample):
+    indexer = indexer()
+
     indexer.collect_all(item_sample)
 
     mixer.blend(DictCatalog, url='https://www.wildberries.ru/catalog/yuvelirnye-ukrasheniya/koltsa/pechatki')
@@ -146,6 +170,8 @@ def test_update_catalogs_cache_filled_cache_with_object(indexer, item_sample):
 
 @pytest.mark.django_db
 def test_update_catalogs_cache_filled_cache_without_object(indexer, item_sample):
+    indexer = indexer()
+
     indexer.collect_all(item_sample)
     mixer.blend(DictCatalog)
 
@@ -197,7 +223,7 @@ def test_update_all_caches(indexer_filled):
 def test_save_version(indexer_filled_with_caches, dump_sample, item_sample):
     dump_sample = dump_sample()
 
-    indexer_filled_with_caches.save_version(dump_sample, item_sample)
+    indexer_filled_with_caches.save_version(item_sample)
 
     indexer_filled_with_caches.bulk_manager.done()
 
@@ -358,9 +384,7 @@ def test_save_parameters_empty(indexer_filled_with_caches, item_sample, version_
 
 @pytest.mark.django_db
 def test_save_all(indexer_filled_with_caches, dump_sample, items_sample):
-    dump = dump_sample()
-
-    indexer_filled_with_caches.save_all(dump, items_sample)
+    indexer_filled_with_caches.save_all(items_sample)
 
     indexer_filled_with_caches.bulk_manager.done()
 
@@ -386,10 +410,8 @@ def test_guess_wb_article(sample_item, expected_article):
 
 
 @pytest.mark.django_db
-def test_process_dump_new(indexer_filled):
-    assert len(Dump.objects.all()) == 0
-
-    indexer_filled.get_or_save_dump('wb', '12345/123/12345')
+def test_process_dump_new():
+    Indexer(job_id='12345/123/12345')
 
     assert len(Dump.objects.all()) == 1
 
@@ -397,11 +419,11 @@ def test_process_dump_new(indexer_filled):
 
     assert obj.crawler == 'wb'
     assert obj.job == '12345/123/12345'
-    assert obj.state == 'processing'
+    assert obj.state == 'created'
 
 
 @pytest.mark.django_db
-def test_process_dump_existing(indexer_filled, dump_sample):
+def test_process_dump_existing(dump_sample):
     dump_sample = dump_sample()
 
     dump_sample.job = '12345/123/12345'
@@ -409,19 +431,23 @@ def test_process_dump_existing(indexer_filled, dump_sample):
 
     assert len(Dump.objects.all()) == 1
 
-    obj = indexer_filled.get_or_save_dump('wb', '12345/123/12345')
+    Indexer(job_id='12345/123/12345')
+
+    obj = Dump.objects.last()
 
     assert len(Dump.objects.all()) == 1
-
     assert obj.job == '12345/123/12345'
 
 
 @pytest.mark.django_db
 def test_prepare_dump_changes_state(dump_sample):
     dump_sample(state=Dump.CREATED, job_id='12345/123/12345', crawler='wb')
-    indexer = Indexer()
 
-    indexer.prepare_dump(job_id='12345/123/12345')
+    indexer = Indexer(job_id='12345/123/12345')
+    indexer.set_chunk_size_get(100)
+    indexer.set_chunk_size_save(100)
+
+    indexer.prepare_dump()
 
     dump = Dump.objects.first()
 
@@ -432,9 +458,9 @@ def test_prepare_dump_changes_state(dump_sample):
 @pytest.mark.django_db
 def test_import_dump_changes_state(dump_sample):
     dump_sample(state=Dump.PREPARED, job_id='12345/123/12345', crawler='wb')
-    indexer = Indexer()
+    indexer = Indexer(job_id='12345/123/12345')
 
-    indexer.import_dump(job_id='12345/123/12345')
+    indexer.import_dump()
 
     dump = Dump.objects.first()
 
@@ -444,41 +470,24 @@ def test_import_dump_changes_state(dump_sample):
 @pytest.mark.django_db
 def test_prepare_existing_dump_correct(dump_sample):
     dump_sample(state=Dump.CREATED, job_id='12345/123/12345', crawler='wb')
-    indexer = Indexer()
 
-    indexer.prepare_dump(job_id='12345/123/12345')
+    indexer = Indexer(job_id='12345/123/12345')
+    indexer.set_chunk_size_save(100)
+    indexer.set_chunk_size_get(100)
+
+    indexer.prepare_dump()
 
     assert len(Sku.objects.all()) == 16
 
 
 @pytest.mark.django_db
-@pytest.mark.django_db
-@pytest.mark.parametrize('state_code', [
-    Dump.PREPARING,
-    Dump.PREPARED,
-    Dump.SCHEDULING,
-    Dump.SCHEDULED,
-    Dump.PROCESSING,
-    Dump.PROCESSED,
-])
-def test_prepare_existing_dump_incorrect(state_code, dump_sample):
-    try:
-        dump_sample(state=state_code, job_id='12345/123/12345', crawler='wb')
-        indexer = Indexer()
-
-        indexer.prepare_dump(job_id='12345/123/12345')
-
-        pytest.fail('Preparing dump with wrong state should raise exception (too late)')
-    except DumpStateTooLateError:
-        assert True
-
-
-@pytest.mark.django_db
 def test_import_existing_dump_correct(dump_sample):
     dump_sample(state=Dump.PREPARED, job_id='12345/123/12345', crawler='wb')
-    indexer = Indexer()
+    indexer = Indexer(job_id='12345/123/12345')
+    indexer.set_chunk_size_get(100)
+    indexer.set_chunk_size_save(100)
 
-    indexer.import_dump(job_id='12345/123/12345')
+    indexer.import_dump()
 
     assert len(Version.objects.all()) == 16
 
@@ -490,9 +499,9 @@ def test_import_existing_dump_correct(dump_sample):
 def test_import_existing_dump_incorrect(state_code, dump_sample):
     try:
         dump_sample(state=state_code, job_id='12345/123/12345', crawler='wb')
-        indexer = Indexer()
+        indexer = Indexer(job_id='12345/123/12345')
 
-        indexer.import_dump(job_id='12345/123/12345')
+        indexer.import_dump()
 
         pytest.fail('Importing dump with wrong state should raise exception')
     except DumpStateError:
@@ -506,9 +515,9 @@ def test_import_existing_dump_incorrect(state_code, dump_sample):
 def test_import_existing_dump_too_late(state_code, dump_sample):
     try:
         dump_sample(state=state_code, job_id='12345/123/12345', crawler='wb')
-        indexer = Indexer()
+        indexer = Indexer(job_id='12345/123/12345')
 
-        indexer.import_dump(job_id='12345/123/12345')
+        indexer.import_dump()
 
         pytest.fail('Importing dump with wrong state should raise exception (too late)')
     except DumpStateTooLateError:
