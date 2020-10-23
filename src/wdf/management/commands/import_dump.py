@@ -32,17 +32,14 @@ class Command(BaseCommand):
             indexer.set_chunk_size_get(options['chunk_size'])
             indexer.set_chunk_size_save(options['chunk_size'])
 
-        dump = indexer.dump
-
-        tasks_num = ceil(dump.items_crawled / group_size)
-
-        prepare_task = prepare_dump.s(job_id=job_id)
-        import_tasks = [import_dump.s(start=group_size * i, count=group_size) for i in range(tasks_num)]
-        wrap_task = wrap_dump.s(job_id=job_id)
+        tasks_num = ceil(indexer.dump.items_crawled / group_size)
 
         chain(
-            prepare_task,
-            chord(import_tasks, wrap_task),
+            prepare_dump.s(job_id=job_id),
+            chord(
+                [import_dump.s(start=group_size * i, count=group_size) for i in range(tasks_num)],
+                wrap_dump.s(job_id=job_id),
+            ),
         ).apply_async(expires=24 * 60 * 60)
 
         self.stdout.write(self.style.SUCCESS(f'Job #{job_id} added to process queue for import ({tasks_num} tasks with up to {group_size} items each)'))
