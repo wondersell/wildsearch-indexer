@@ -15,6 +15,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--tags', type=str, default='')
         parser.add_argument('--state', type=str, default='finished', required=False)
+        parser.add_argument('--chunk_size', type=int, default=5000, required=False)
+        parser.add_argument('--group_size', type=int, default=5000, required=False)
 
     def handle(self, *args, **options):
         console = logging.StreamHandler()
