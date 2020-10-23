@@ -141,7 +141,9 @@ class Indexer(object):
         generator = self.get_generator(start=start, count=count, chunk_size=self.get_chunk_size)
 
         if self.dump.state_code > 25:
-            raise DumpStateTooLateError(f'Wrong dump state code ({self.dump.state_code} – {self.dump.state}) for importing dump, too late')
+            logger.info(f'Dump already imported (state code {self.dump.state_code} – {self.dump.state}), skipping import step')
+
+            return self
 
         self.dump.set_state(Dump.PROCESSING)
         self.dump.save()

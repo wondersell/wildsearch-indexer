@@ -497,28 +497,9 @@ def test_import_existing_dump_correct(dump_sample):
     Dump.PROCESSED,
 ])
 def test_import_existing_dump_incorrect(state_code, dump_sample):
-    try:
-        dump_sample(state=state_code, job_id='12345/123/12345', crawler='wb')
-        indexer = Indexer(job_id='12345/123/12345')
+    dump_sample(state=state_code, job_id='12345/123/12345', crawler='wb')
+    indexer = Indexer(job_id='12345/123/12345')
 
-        indexer.import_dump()
+    indexer.import_dump()
 
-        pytest.fail('Importing dump with wrong state should raise exception')
-    except DumpStateError:
-        assert True
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize('state_code', [
-    Dump.PROCESSED,
-])
-def test_import_existing_dump_too_late(state_code, dump_sample):
-    try:
-        dump_sample(state=state_code, job_id='12345/123/12345', crawler='wb')
-        indexer = Indexer(job_id='12345/123/12345')
-
-        indexer.import_dump()
-
-        pytest.fail('Importing dump with wrong state should raise exception (too late)')
-    except DumpStateTooLateError:
-        assert True
+    assert len(Version.objects.all()) == 0  # дамп со статусом "обработан" должен возвращать сам себя вне зависимости от количества данных в нем
