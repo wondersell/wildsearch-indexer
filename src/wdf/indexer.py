@@ -12,7 +12,7 @@ from django.utils import timezone
 from scrapinghub import ScrapinghubClient
 
 from wdf.bulk_create_manager import BulkCreateManager
-from wdf.exceptions import DumpCorruptedError, DumpStateTooLateError
+from wdf.exceptions import DumpCorruptedError
 from wdf.models import (
     DictBrand, DictCatalog, DictMarketplace, DictParameter, Dump, Parameter, Position, Price, Rating, Reviews, Sales,
     Sku, Version)
