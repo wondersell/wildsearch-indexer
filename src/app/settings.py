@@ -162,7 +162,7 @@ HEALTH_CHECKS = {
 
 # Celery configs
 CELERY_BROKER_URL = BROKER_URL = env('REDIS_URL')  # but why?
-CELERY_BROKER_TRANSPORT_OPTIONS = BROKER_TRANSPORT_OPTIONS = {'max_retries': 3, 'interval_start': 0, 'interval_step': 0.2, 'interval_max': 0.5}
+CELERY_BROKER_TRANSPORT_OPTIONS = BROKER_TRANSPORT_OPTIONS = {'max_retries': 3, 'interval_start': 0, 'interval_step': 0.2, 'interval_max': 0.5, 'visibility_timeout': 3600 * 48}
 CELERY_RESULT_BACKEND = RESULT_BACKEND = env('REDIS_URL')
 
 CELERY_REDIS_MAX_CONNECTIONS = env('CELERY_REDIS_MAX_CONNECTIONS', cast=int, default=5)
