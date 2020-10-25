@@ -1,5 +1,5 @@
 import logging
-from celery import chain, chord
+from celery import chain, chord, group
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from math import ceil
@@ -42,9 +42,9 @@ class Command(BaseCommand):
             tasks_num = ceil(indexer.dump.items_crawled / group_size)
 
             chain(
-                prepare_dump.s(job_id=job_id),
+                group(prepare_dump.s(job_id=job_id, start=group_size * i, count=group_size) for i in range(tasks_num)),
                 chord(
-                    [import_dump.s(start=group_size * i, count=group_size) for i in range(tasks_num)],
+                    [import_dump.s(job_id=job_id, start=group_size * i, count=group_size) for i in range(tasks_num)],
                     wrap_dump.s(job_id=job_id),
                 ),
             ).apply_async(expires=24 * 60 * 60)

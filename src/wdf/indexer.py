@@ -119,8 +119,8 @@ class Indexer(object):
 
         return self
 
-    def prepare_dump(self):
-        generator = self.get_generator(chunk_size=self.get_chunk_size)
+    def prepare_dump(self, start=0, count=sys.maxsize):
+        generator = self.get_generator(start=start, count=count, chunk_size=self.get_chunk_size)
 
         if self.dump.state_code > 0:
             logger.info(f'Dump already prepared (state code {self.dump.state_code} – {self.dump.state}), skipping prepare step')

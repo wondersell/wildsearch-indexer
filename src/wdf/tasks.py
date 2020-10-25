@@ -22,13 +22,13 @@ environ.Env.read_env()
         'countdown': 5,
     },
 )
-def prepare_dump(job_id):
+def prepare_dump(job_id, start=0, count=sys.maxsize):
     logger.info(f'Preparing dump for job {job_id}')
 
     indexer = Indexer(job_id=job_id)
 
     try:
-        indexer.prepare_dump()
+        indexer.prepare_dump(start=start, count=count)
     except DumpStateTooLateError as e:
         logger.error(f'Job {job_id} prepare failed. {str(e)}')
     else:
@@ -44,7 +44,7 @@ def prepare_dump(job_id):
         'countdown': 100,
     },
 )
-def import_dump(job_id, start=0, count=sys.maxsize):
+def import_dump(results, job_id, start=0, count=sys.maxsize):
     logger.info(f'Importing dump for job {job_id} from item {start}, {count} items max')
 
     indexer = Indexer(job_id=job_id)
