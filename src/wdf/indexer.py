@@ -350,13 +350,19 @@ class Indexer(object):
                 }
 
     def collect_wb_skus(self, item):
+        sku_title = item['product_name']
+        max_length = Sku._meta.get_field('title').max_length
+
+        if len(sku_title) > max_length:
+            sku_title = sku_title[0:max_length - 1]
+
         self.skus_retrieved[item['wb_id']] = {
             'parse_date': item['parse_date'],
             'marketplace': self.marketplace.id,
             'brand': item['wb_brand_url'] if 'wb_brand_url' in item.keys() else None,
             'article': guess_wb_article(item),
             'url': item['product_url'],
-            'title': item['product_name'],
+            'title': sku_title,
         }
 
     def update_all_caches(self, catalogs, brands, parameters, skus):
