@@ -42,7 +42,7 @@ class Command(BaseCommand):
             tasks_num = ceil(indexer.dump.items_crawled / group_size)
 
             chain(
-                group(prepare_dump.s(job_id=job_id, start=group_size * i, count=group_size) for i in range(tasks_num)),
+                prepare_dump.s(job_id=job_id),
                 chord(
                     [import_dump.s(job_id=job_id, start=group_size * i, count=group_size) for i in range(tasks_num)],
                     wrap_dump.s(job_id=job_id),
