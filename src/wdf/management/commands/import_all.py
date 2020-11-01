@@ -1,5 +1,5 @@
 import logging
-from celery import chain, chord, group
+from celery import chain, chord
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from math import ceil
