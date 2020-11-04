@@ -6,7 +6,7 @@ from requests.exceptions import RequestException
 
 from wdf.exceptions import DumpStateTooEarlyError, DumpStateTooLateError
 from wdf.indexer import Indexer
-from wdf.models import Dump
+from wdf.models import Dump, Sku
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -84,5 +84,16 @@ def prune_dump(job_id):
     dump = Dump.objects.filter(job=job_id).first()
 
     dump.prune()
+
+    return True
+
+
+@shared_task
+def merge_duplicate(sku_article):
+    sku = Sku.objects.filter(article=sku_article).first()
+
+    sku.merge_duplicates()
+
+    logger.info(f'Merged duplicates for sku article {sku_article} (primary id {sku.id})')
 
     return True

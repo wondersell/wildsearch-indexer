@@ -41,30 +41,30 @@ class Dump(models.Model):
     def prune(self):
         with connection.cursor() as cursor:
             cursor.execute(
-                'delete from wdf_parameter where version_id in (select id from wdf_version where dump_id=%s);',
+                'DELETE FROM wdf_parameter WHERE version_id IN (SELECT id FROM wdf_version WHERE dump_id=%s);',
                 [self.id])
 
             cursor.execute(
-                'delete from wdf_position where version_id in (select id from wdf_version where dump_id=%s);',
+                'DELETE FROM wdf_position WHERE version_id IN (SELECT id FROM wdf_version WHERE dump_id=%s);',
                 [self.id])
 
             cursor.execute(
-                'delete from wdf_price where version_id in (select id from wdf_version where dump_id=%s);',
+                'DELETE FROM wdf_price WHERE version_id IN (SELECT id FROM wdf_version WHERE dump_id=%s);',
                 [self.id])
 
             cursor.execute(
-                'delete from wdf_rating where version_id in (select id from wdf_version where dump_id=%s);',
+                'DELETE FROM wdf_rating WHERE version_id IN (SELECT id FROM wdf_version WHERE dump_id=%s);',
                 [self.id])
 
             cursor.execute(
-                'delete from wdf_reviews where version_id in (select id from wdf_version where dump_id=%s);',
+                'DELETE FROM wdf_reviews WHERE version_id IN (SELECT id FROM wdf_version WHERE dump_id=%s);',
                 [self.id])
 
             cursor.execute(
-                'delete from wdf_sales where version_id in (select id from wdf_version where dump_id=%s);',
+                'DELETE FROM wdf_sales WHERE version_id IN (SELECT id FROM wdf_version WHERE dump_id=%s);',
                 [self.id])
 
-            cursor.execute('delete from wdf_version where dump_id=%s;', [self.id])
+            cursor.execute('DELETE FROM wdf_version WHERE dump_id=%s;', [self.id])
 
         return self.delete()
 
@@ -104,6 +104,19 @@ class Sku(models.Model):
     url = models.URLField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def merge_duplicates(self):
+        with connection.cursor() as cursor:
+            cursor.execute('UPDATE wdf_parameter SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
+            cursor.execute('UPDATE wdf_position SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
+            cursor.execute('UPDATE wdf_price SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
+            cursor.execute('UPDATE wdf_rating SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
+            cursor.execute('UPDATE wdf_reviews SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
+            cursor.execute('UPDATE wdf_sales SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
+            cursor.execute('UPDATE wdf_version SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
+            cursor.execute('DELETE FROM wdf_sku WHERE article=%s AND id!=%s;', [self.article, self.id])
+
+            return True
 
     class Meta:
         db_table = 'wdf_sku'
