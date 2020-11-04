@@ -34,13 +34,10 @@ class Command(BaseCommand):
                     merge_duplicate.delay(sku_article=article[0])
 
                 if len(articles) == 0:
-                    self.stdout.write(self.style.SUCCESS(f'No more duplicates, stop producing tasks'))
+                    self.stdout.write(self.style.SUCCESS('No more duplicates, stop producing tasks'))
 
                     break
                 else:
                     self.stdout.write(self.style.SUCCESS(f'{len(articles)} tasks added to queue (LIMIT {limit} OFFSET {offset})'))
 
                 offset += limit
-
-
-
