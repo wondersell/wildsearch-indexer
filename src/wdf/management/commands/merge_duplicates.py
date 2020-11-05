@@ -10,6 +10,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--chunk_size', type=int, default=1000, required=False)
+        parser.add_argument('--process_all', choices=['yes', 'no'], default='no')
 
     def handle(self, *args, **options):
         console = logging.StreamHandler()
@@ -26,7 +27,10 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f'Start creating tasks for duplicates with chunk size {limit}'))
 
             while True:
-                cursor.execute('SELECT wdf_sku.article FROM wdf_sku GROUP BY article HAVING count(wdf_sku.id) > 1 LIMIT %s OFFSET %s;', [limit, offset])
+                if options['chunk_size'] == 'no':
+                    cursor.execute('SELECT wdf_sku.article FROM wdf_sku GROUP BY article HAVING count(wdf_sku.id) > 1 LIMIT %s OFFSET %s;', [limit, offset])
+                else:
+                    cursor.execute('SELECT DISTINCT wdf_sku.article FROM wdf_sku LIMIT %s OFFSET %s;', [limit, offset])
 
                 articles = cursor.fetchall()
 
