@@ -27,7 +27,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f'Start creating tasks for duplicates with chunk size {limit}'))
 
             while True:
-                if options['chunk_size'] == 'no':
+                if options['process_all'] == 'no':
                     cursor.execute('SELECT wdf_sku.article FROM wdf_sku GROUP BY article HAVING count(wdf_sku.id) > 1 LIMIT %s OFFSET %s;', [limit, offset])
                 else:
                     cursor.execute('SELECT DISTINCT wdf_sku.article FROM wdf_sku LIMIT %s OFFSET %s;', [limit, offset])
