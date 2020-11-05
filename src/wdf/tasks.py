@@ -1,6 +1,7 @@
 import environ
 import logging
 import sys
+import time
 from celery import shared_task
 from requests.exceptions import RequestException
 
@@ -90,10 +91,14 @@ def prune_dump(job_id):
 
 @shared_task
 def merge_duplicate(sku_article):
+    start_time = time.time()
+
     sku = Sku.objects.filter(article=sku_article).first()
 
     sku.merge_duplicates()
 
-    logger.info(f'Merged duplicates for sku article {sku_article} (primary id {sku.id})')
+    time_spent = time.time() - start_time
+
+    logger.info(f'Merged duplicates for sku article {sku_article} (primary id {sku.id}) in {time_spent}s')
 
     return True
