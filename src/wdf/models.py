@@ -107,13 +107,18 @@ class Sku(models.Model):
 
     def merge_duplicates(self):
         with connection.cursor() as cursor:
-            cursor.execute('UPDATE wdf_parameter SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
-            cursor.execute('UPDATE wdf_position SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
-            cursor.execute('UPDATE wdf_price SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
-            cursor.execute('UPDATE wdf_rating SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
-            cursor.execute('UPDATE wdf_reviews SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
-            cursor.execute('UPDATE wdf_sales SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
-            cursor.execute('UPDATE wdf_version SET sku_id=%s WHERE sku_id IN (SELECT id FROM wdf_sku WHERE article=%s AND id!=%s);', [self.id, self.article, self.id])
+            cursor.execute('SELECT id FROM wdf_sku WHERE article=%s AND id!=%s', [self.article, self.id])
+
+            ids_list = list(map(lambda x: x[0], cursor.fetchall()))
+
+            cursor.execute('UPDATE wdf_parameter SET sku_id=%s WHERE sku_id=ANY(%s);', [self.id, ids_list])
+            cursor.execute('UPDATE wdf_position SET sku_id=%s WHERE sku_id=ANY(%s);', [self.id, ids_list])
+            cursor.execute('UPDATE wdf_price SET sku_id=%s WHERE sku_id=ANY(%s);', [self.id, ids_list])
+            cursor.execute('UPDATE wdf_rating SET sku_id=%s WHERE sku_id=ANY(%s);', [self.id, ids_list])
+            cursor.execute('UPDATE wdf_reviews SET sku_id=%s WHERE sku_id=ANY(%s);', [self.id, ids_list])
+            cursor.execute('UPDATE wdf_sales SET sku_id=%s WHERE sku_id=ANY(%s);', [self.id, ids_list])
+            cursor.execute('UPDATE wdf_version SET sku_id=%s WHERE sku_id=ANY(%s);', [self.id, ids_list])
+
             cursor.execute('DELETE FROM wdf_sku WHERE article=%s AND id!=%s;', [self.article, self.id])
 
             return True
