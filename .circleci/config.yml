@@ -1,7 +1,9 @@
 version: 2.1
 
 orbs:
-  heroku: circleci/heroku@0.0.10
+  heroku: circleci/heroku@1.2.3
+  aws-ecr: circleci/aws-ecr@6.14.0
+  aws-ecs: circleci/aws-ecs@1.4.0
 
 defaults: &defaults
   docker:
@@ -19,6 +21,7 @@ jobs:
 
     steps:
       - checkout
+
       - restore_cache:
           key: deps-{{ checksum "src/requirements.txt" }}
 
@@ -67,13 +70,12 @@ jobs:
             . venv/bin/activate
             cd src && py.test -x
 
-  deploy:
+  deploy-to-heroku:
     executor: heroku/default # Uses the basic buildpack-deps image, which has the prerequisites for installing heroku's CLI.
     steps:
       - checkout
       - heroku/install # Runs the heroku install command, if necessary.
       - heroku/deploy-via-git: # Deploys branch to Heroku via git push.
-          only-branch: master # If you specify an only-branch, the deploy will not occur for any other branch.
 
 workflows:
   version: 2
@@ -83,6 +85,9 @@ workflows:
       - unittest:
           requires:
             - build
-      - deploy:
+      - deploy-to-heroku:
           requires:
             - unittest
+          filters:
+            branches:
+              only: master
