@@ -70,12 +70,12 @@ jobs:
             . venv/bin/activate
             cd src && py.test -x
 
-  deploy_to_heroku:
+  deploy-to-heroku:
     executor: heroku/default # Uses the basic buildpack-deps image, which has the prerequisites for installing heroku's CLI.
     steps:
       - checkout
       - heroku/install # Runs the heroku install command, if necessary.
-      - heroku/deploy-via-git: # Deploys branch to Heroku via git push.
+      - heroku/deploy-via-git # Deploys branch to Heroku via git push.
 
 workflows:
   version: 2
@@ -85,7 +85,7 @@ workflows:
       - unittest:
           requires:
             - build
-      - deploy_to_heroku:
+      - deploy-to-heroku:
           requires:
             - unittest
           filters:
