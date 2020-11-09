@@ -2,7 +2,7 @@ Django==3.1.2
 django-behaviors
 django-environ
 whitenoise
-celery==4.4.7  # because of broken flower integration in 5.0.0
+celery==5.0.2  # because of broken flower integration in 5.0.0
 flower==0.9.5
 requests==2.24.0
 python-dateutil==2.8.1
