@@ -35,7 +35,8 @@ resource "aws_iam_role_policy" "password_policy_secretsmanager" {
       "Resource": [
         "${local.secrets_database_url_arn}",
         "${local.secrets_sh_apikey_arn}",
-        "${local.secrets_sh_project_id_arn}"
+        "${local.secrets_sh_project_id_arn}",
+        "${local.django_secret_arn}"
       ]
     }
   ]

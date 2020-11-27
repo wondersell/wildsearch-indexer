@@ -22,6 +22,7 @@ data "template_file" "container_image_celery" {
     database_url  = local.secrets_database_url_arn
     sh_apikey     = local.secrets_sh_apikey_arn
     sh_project_id = local.secrets_sh_project_id_arn
+    django_secret = local.django_secret_arn
 
     # Envs
     redis_url               = "redis://${aws_elasticache_replication_group.default.primary_endpoint_address}:${aws_elasticache_replication_group.default.port}"
@@ -61,6 +62,7 @@ data "template_file" "container_image_flower" {
     database_url  = local.secrets_database_url_arn
     sh_apikey     = local.secrets_sh_apikey_arn
     sh_project_id = local.secrets_sh_project_id_arn
+    django_secret = local.django_secret_arn
 
     # Envs
     redis_url               = "redis://${aws_elasticache_replication_group.default.primary_endpoint_address}:${aws_elasticache_replication_group.default.port}"
@@ -99,6 +101,7 @@ data "template_file" "container_image_console" {
     database_url  = local.secrets_database_url_arn
     sh_apikey     = local.secrets_sh_apikey_arn
     sh_project_id = local.secrets_sh_project_id_arn
+    django_secret = local.django_secret_arn
 
     # Envs
     redis_url               = "redis://${aws_elasticache_replication_group.default.primary_endpoint_address}:${aws_elasticache_replication_group.default.port}"

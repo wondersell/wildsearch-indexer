@@ -65,6 +65,7 @@ locals {
   secrets_database_url_arn  = "arn:aws:secretsmanager:eu-north-1:759973589405:secret:/wdf/prod/DATABASE_URL-B0W7L2"
   secrets_sh_apikey_arn     = "arn:aws:secretsmanager:eu-north-1:759973589405:secret:/wdf/prod/SH_APIKEY-606Kvo"
   secrets_sh_project_id_arn = "arn:aws:secretsmanager:eu-north-1:759973589405:secret:/wdf/prod/SH_PROJECT_ID-KGx1Sq"
+  django_secret_arn         = "arn:aws:secretsmanager:eu-north-1:759973589405:secret:/wdf/prof/DJANGO_SECRET_KEY-3qyGuf"
 
   indexer_get_chunk_size  = 1000
   indexer_save_chunk_size = 1000

@@ -23,6 +23,10 @@
       {
         "name": "SH_PROJECT_ID",
         "valueFrom": "${sh_project_id}"
+      },
+      {
+        "name": "SECRET_KEY",
+        "valueFrom": "${django_secret}"
       }
     ],
     "environment": [
