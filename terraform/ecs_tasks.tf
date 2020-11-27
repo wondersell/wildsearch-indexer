@@ -7,7 +7,7 @@ resource "aws_cloudwatch_log_group" "celery" {
 }
 
 data "template_file" "container_image_celery" {
-  template   = file("aws-ecs-task-definitions/queue.json")
+  template   = file("aws-ecs-task-definitions/celery.json")
   depends_on = [aws_elasticache_replication_group.default]
   vars = {
     service_name      = local.aws_ecs_service_celery_name
@@ -47,7 +47,7 @@ resource "aws_cloudwatch_log_group" "flower" {
 }
 
 data "template_file" "container_image_flower" {
-  template   = file("aws-ecs-task-definitions/queue.json")
+  template   = file("aws-ecs-task-definitions/flower.json")
   depends_on = [aws_elasticache_replication_group.default]
   vars = {
     service_name      = local.aws_ecs_service_flower_name
