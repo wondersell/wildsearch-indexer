@@ -10,4 +10,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 ADD src /srv
 
-WORKDIR /srv
+WORKDIR /

@@ -152,11 +152,6 @@ jobs:
           aws-region: "AWS_REGION"
       - aws-ecs/update-service:
           cluster-name: "<< pipeline.parameters.app-name >>"
-          family: "<< pipeline.parameters.app-name >>Task-web"
-          service-name: "<< pipeline.parameters.app-name >>Service-web"
-          force-new-deployment: true
-      - aws-ecs/update-service:
-          cluster-name: "<< pipeline.parameters.app-name >>"
           family: "<< pipeline.parameters.app-name >>Task-celery"
           service-name: "<< pipeline.parameters.app-name >>Service-celery"
           force-new-deployment: true
@@ -164,6 +159,11 @@ jobs:
           cluster-name: "<< pipeline.parameters.app-name >>"
           family: "<< pipeline.parameters.app-name >>Task-flower"
           service-name: "<< pipeline.parameters.app-name >>Service-flower"
+          force-new-deployment: true
+      - aws-ecs/update-service:
+          cluster-name: "<< pipeline.parameters.app-name >>"
+          family: "<< pipeline.parameters.app-name >>Task-console"
+          service-name: "<< pipeline.parameters.app-name >>Service-console"
           force-new-deployment: true
 
 workflows:
