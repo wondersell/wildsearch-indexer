@@ -122,7 +122,7 @@ jobs:
       - run:
           name: Terraform init & apply
           command: |
-            cd terraform-playground
+            cd terraform
             terraform init -backend-config="access_key=${AWS_ACCESS_KEY_ID}" -backend-config="secret_key=${AWS_SECRET_ACCESS_KEY}" -backend-config="region=${AWS_REGION}"
             terraform plan
             terraform apply -auto-approve
