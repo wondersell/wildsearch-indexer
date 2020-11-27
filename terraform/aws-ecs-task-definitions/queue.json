@@ -1,0 +1,52 @@
+[
+  {
+    "name": "${service_name}",
+    "image": "${image_name}:latest",
+    "cpu": ${cpu},
+    "memory": ${memory},
+    "entryPoint": [
+      "sh",
+      "-c"
+    ],
+    "command": [
+      "${command}"
+    ],
+    "secrets": [
+      {
+        "name": "DATABASE_URL",
+        "valueFrom": "${database_url}"
+      },
+      {
+        "name": "SH_APIKEY",
+        "valueFrom": "${sh_apikey}"
+      },
+      {
+        "name": "SH_PROJECT_ID",
+        "valueFrom": "${sh_project_id}"
+      }
+    ],
+    "environment": [
+      {
+        "name": "REDIS_URL",
+        "value": "${redis_url}"
+      },
+      {
+        "name": "INDEXER_GET_CHUNK_SIZE",
+        "value": "${indexer_get_chunk_size}"
+      },
+      {
+        "name": "INDEXER_SAVE_CHUNK_SIZE",
+        "value": "${indexer_save_chunk_size}"
+      }
+    ],
+    "portMappings": [],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+          "awslogs-group": "${service_name}",
+          "awslogs-region": "${aws_region}",
+          "awslogs-stream-prefix": "${log_stream_prefix}"
+      }
+    }
+  }
+]
