@@ -115,7 +115,6 @@ jobs:
     shell: /bin/sh -leo pipefail
     environment:
       - BASH_ENV: /etc/profile
-
     steps:
       - set-terraform-envs
       - checkout
@@ -175,13 +174,13 @@ workflows:
       - unittest:
           requires:
             - build
-      - update-infrastructure
+      - update-infrastructure:
           requires:
             - unittest
           filters:
             branches:
               only: master
-      - update-image
+      - update-image:
           requires:
             - unittest
           filters:
