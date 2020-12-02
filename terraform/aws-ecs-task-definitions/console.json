@@ -4,13 +4,8 @@
     "image": "${image_name}:latest",
     "cpu": ${cpu},
     "memory": ${memory},
-    "entryPoint": [
-      "sh",
-      "-c"
-    ],
-    "command": [
-      ""
-    ],
+    "interactive": true,
+    "pseudoTerminal": true,
     "secrets": [
       {
         "name": "DATABASE_URL",
@@ -43,13 +38,7 @@
         "value": "${indexer_save_chunk_size}"
       }
     ],
-    "portMappings": [
-      {
-        "containerPort": 443,
-        "hostPort": 443,
-        "protocol": "tcp"
-      }
-    ],
+    "portMappings": [],
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {

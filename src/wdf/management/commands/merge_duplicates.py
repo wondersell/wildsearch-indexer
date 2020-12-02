@@ -11,6 +11,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--chunk_size', type=int, default=1000, required=False)
         parser.add_argument('--process_all', choices=['yes', 'no'], default='no')
+        parser.add_argument('--offset_start', type=int, default=0)
 
     def handle(self, *args, **options):
         console = logging.StreamHandler()
@@ -21,7 +22,7 @@ class Command(BaseCommand):
         logger.addHandler(console)
 
         with connection.cursor() as cursor:
-            offset = 0
+            offset = options['offset_start']
             limit = options['chunk_size']
 
             self.stdout.write(self.style.SUCCESS(f'Start creating tasks for duplicates with chunk size {limit}'))

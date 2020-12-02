@@ -77,7 +77,7 @@ resource "aws_ecs_cluster" "cluster" {
 
 resource "aws_ecs_service" "celery" {
   name          = local.aws_ecs_service_celery_name
-  desired_count = 3
+  desired_count = 5
 
   cluster         = aws_ecs_cluster.cluster.id
   task_definition = aws_ecs_task_definition.celery.arn
