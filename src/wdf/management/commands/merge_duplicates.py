@@ -31,7 +31,7 @@ class Command(BaseCommand):
                 if options['process_all'] == 'no':
                     cursor.execute('SELECT wdf_sku.article FROM wdf_sku GROUP BY article HAVING count(wdf_sku.id) > 1 LIMIT %s OFFSET %s;', [limit, offset])
                 else:
-                    cursor.execute('SELECT wdf_sku.article FROM wdf_sku LIMIT %s OFFSET %s;', [limit, offset])
+                    cursor.execute('SELECT wdf_sku.article FROM wdf_sku ORDER BY wdf_sku.created_at DESC LIMIT %s OFFSET %s;', [limit, offset])
 
                 articles = cursor.fetchall()
 
