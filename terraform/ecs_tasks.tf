@@ -15,8 +15,8 @@ data "template_file" "container_image_celery" {
     aws_region        = var.aws_region
     log_stream_prefix = "celery_"
     command           = "celery -A app worker --concurrency=4 -Ofair"
-    cpu               = 512
-    memory            = 512
+    cpu               = 680
+    memory            = 315
 
     # Secrets
     database_url  = local.secrets_database_url_arn
@@ -55,8 +55,8 @@ data "template_file" "container_image_flower" {
     aws_region        = var.aws_region
     log_stream_prefix = "flower_"
     command           = "flower -A app --port=80"
-    cpu               = 512
-    memory            = 256
+    cpu               = 680
+    memory            = 315
 
     # Secrets
     database_url  = local.secrets_database_url_arn
@@ -94,8 +94,8 @@ data "template_file" "container_image_console" {
     image_name        = aws_ecr_repository.wdf.repository_url
     aws_region        = var.aws_region
     log_stream_prefix = "console_"
-    cpu               = 512
-    memory            = 256
+    cpu               = 680
+    memory            = 315
 
     # Secrets
     database_url  = local.secrets_database_url_arn
