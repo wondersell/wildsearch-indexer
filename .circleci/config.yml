@@ -37,6 +37,7 @@ commands:
             echo "export TF_VAR_aws_secret_key=$AWS_SECRET_ACCESS_KEY" >> $BASH_ENV
             echo "export TF_VAR_aws_region=$AWS_REGION" >> $BASH_ENV
             echo "export TF_VAR_aws_account_id=$AWS_ACCOUNT_ID" >> $BASH_ENV
+            echo "export TF_VAR_datadog_api_key=$DATADOG_API_KEY" >> $BASH_ENV
 
             # Then set vars for deployment
             echo "export TF_VAR_app_name=<< pipeline.parameters.app-name >>" >> $BASH_ENV
