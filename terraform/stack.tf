@@ -74,6 +74,16 @@ module "vpc" {
   enable_nat_gateway = true
 }
 
+data "aws_ami" "latest-ecs" {
+  most_recent = true
+  owners = ["amazon", "aws-marketplace"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-ecs-*"]
+  }
+}
+
 resource "aws_cloudformation_stack" "stack" {
   name = local.aws_ecs_stack_name
 
@@ -90,7 +100,7 @@ resource "aws_cloudformation_stack" "stack" {
     DeviceName              = "/dev/xvdcz"
     EbsVolumeSize           = 22
     EbsVolumeType           = "gp2"
-    EcsAmiId                = local.ecs_ami
+    EcsAmiId                = data.aws_ami.latest-ecs.id
     EcsClusterName          = local.aws_ecs_cluster_name
     EcsInstanceType         = local.ecs_instance_size
     IamRoleInstanceProfile  = aws_iam_instance_profile.instance_profile.arn
