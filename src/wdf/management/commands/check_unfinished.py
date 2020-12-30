@@ -39,7 +39,9 @@ class Command(BaseCommand):
 
                 self.stdout.write(self.style.SUCCESS(f'Dump {unfinished_dump.job} set as processed'))
             else:
-                if abs(datetime.now(timezone.utc) - unfinished_dump.created_at).minutes > options['older_than']:
+                minutes_passed = abs(datetime.now(timezone.utc) - unfinished_dump.created_at).total_seconds() / 60
+
+                if minutes_passed > options['older_than']:
                     prune_dump.delay(job_id=unfinished_dump.job)
 
                     self.stdout.write(self.style.SUCCESS(f'Dump {unfinished_dump.job} scheduled for prune'))
