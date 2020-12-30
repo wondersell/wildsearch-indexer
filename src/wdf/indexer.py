@@ -8,6 +8,7 @@ import time
 from datetime import datetime
 from dateutil.parser import parse as date_parse
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 from scrapinghub import ScrapinghubClient
 
@@ -137,6 +138,7 @@ class Indexer(object):
 
         return self
 
+    @transaction.atomic
     def import_dump(self, start=0, count=sys.maxsize):
         generator = self.get_generator(start=start, count=count, chunk_size=self.get_chunk_size)
 
@@ -174,6 +176,8 @@ class Indexer(object):
             self.log_prefix = f'Job {self.dump.job}, chunk #{chunk_no}: '
 
             try:
+                log_action = 'Prepared'
+
                 start_time = time.time()
                 mem_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024 / 1024  # в мегабайтах
 
@@ -188,13 +192,15 @@ class Indexer(object):
                 self.update_all_caches(self.catalogs_retrieved, self.brands_retrieved, self.parameters_retrieved, self.skus_retrieved)
 
                 if save_versions:
+                    log_action = 'Saved'
+
                     self.save_all(chunk)
 
                     self.bulk_manager.done(log_prefix=self.log_prefix)
 
                 time_spent = time.time() - start_time
 
-                logger.info(f'{self.log_prefix}Processed in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min, used {round(mem_usage, 2)}MB')
+                logger.info(f'{self.log_prefix}{log_action} in {time_spent}s, {round(len(chunk) / time_spent * 60)} items/min, used {round(mem_usage, 2)}MB')
 
                 chunk_no += 1
             except KeyboardInterrupt:
