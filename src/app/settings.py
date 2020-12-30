@@ -161,7 +161,7 @@ HEALTH_CHECKS = {
 
 
 # Celery configs
-broker_url = env('REDIS_URL')  # but why?
+broker_url = env('REDIS_URL')
 broker_transport_options = {'max_retries': 3, 'interval_start': 0, 'interval_step': 0.2, 'interval_max': 0.5, 'visibility_timeout': 3600 * 48}
 result_backend = env('REDIS_URL')
 
