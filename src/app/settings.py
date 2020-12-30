@@ -161,14 +161,15 @@ HEALTH_CHECKS = {
 
 
 # Celery configs
-CELERY_BROKER_URL = BROKER_URL = env('REDIS_URL')  # but why?
-CELERY_BROKER_TRANSPORT_OPTIONS = BROKER_TRANSPORT_OPTIONS = {'max_retries': 3, 'interval_start': 0, 'interval_step': 0.2, 'interval_max': 0.5, 'visibility_timeout': 3600 * 48}
-CELERY_RESULT_BACKEND = RESULT_BACKEND = env('REDIS_URL')
+broker_url = env('REDIS_URL')  # but why?
+broker_transport_options = {'max_retries': 3, 'interval_start': 0, 'interval_step': 0.2, 'interval_max': 0.5, 'visibility_timeout': 3600 * 48}
+result_backend = env('REDIS_URL')
 
-CELERY_REDIS_MAX_CONNECTIONS = env('CELERY_REDIS_MAX_CONNECTIONS', cast=int, default=5)
-CELERY_ALWAYS_EAGER = env('CELERY_ALWAYS_EAGER', cast=bool, default=False)
-CELERY_TIMEZONE = TIME_ZONE
-CELERY_ENABLE_UTC = False
+redis_max_connections = env('CELERY_REDIS_MAX_CONNECTIONS', cast=int, default=5)
+task_always_eager = env('CELERY_ALWAYS_EAGER', cast=bool, default=False)
+task_reject_on_worker_lost = env('CELERY_TASK_REJECT_ON_WORKER_LOST', cast=bool, default=True)
+timezone = TIME_ZONE
+enable_utc = False
 
 
 # Application-specific configs
