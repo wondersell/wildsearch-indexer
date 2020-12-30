@@ -1,3 +1,4 @@
+import environ
 import logging
 from celery import chain, chord
 from django.conf import settings
@@ -8,6 +9,9 @@ from scrapinghub import ScrapinghubClient
 from wdf.indexer import Indexer
 from wdf.tasks import import_dump, prepare_dump, wrap_dump
 
+env = environ.Env(DEBUG=(bool, False))
+environ.Env.read_env()
+
 
 class Command(BaseCommand):
     help = 'Adds all selected by tag jobs to data facility'  # noqa: VNE003
@@ -15,8 +19,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--tags', type=str, default='')
         parser.add_argument('--state', type=str, default='finished', required=False)
-        parser.add_argument('--chunk_size', type=int, default=5000, required=False)
-        parser.add_argument('--group_size', type=int, default=5000, required=False)
+        parser.add_argument('--chunk_size', type=int, default=env('INDEXER_GET_CHUNK_SIZE'), required=False)
+        parser.add_argument('--group_size', type=int, default=env('INDEXER_GET_CHUNK_SIZE'), required=False)
 
     def handle(self, *args, **options):
         console = logging.StreamHandler()
@@ -32,6 +36,10 @@ class Command(BaseCommand):
             job_id = job['key']
 
             indexer = Indexer(job_id=job_id)
+
+            if indexer.dump.state_code > 25:
+                self.stdout.write(self.style.SUCCESS(f'Job #{job_id} already imported'))
+                continue
 
             group_size = options['group_size']
 
