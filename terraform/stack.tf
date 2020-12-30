@@ -79,6 +79,11 @@ data "aws_ami" "latest-ecs" {
   owners = ["amazon", "aws-marketplace"]
 
   filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
     name   = "name"
     values = ["amzn2-ami-ecs-*"]
   }
