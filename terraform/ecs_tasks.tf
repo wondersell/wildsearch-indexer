@@ -14,7 +14,7 @@ data "template_file" "container_image_celery" {
     image_name        = aws_ecr_repository.wdf.repository_url
     aws_region        = var.aws_region
     log_stream_prefix = "celery_"
-    command           = "celery -A app worker --concurrency=4 -Ofair"
+    command           = "celery -A app worker --concurrency=2 -Ofair"
     cpu               = 680
     memory            = 315
 
