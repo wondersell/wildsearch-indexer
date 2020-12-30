@@ -12,6 +12,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--job_id', type=str, required=False)
+        parser.add_argument('--older_than', type=int, required=False, default=24*60)
 
     def handle(self, *args, **options):
         console = logging.StreamHandler()
@@ -38,7 +39,7 @@ class Command(BaseCommand):
 
                 self.stdout.write(self.style.SUCCESS(f'Dump {unfinished_dump.job} set as processed'))
             else:
-                if abs(datetime.now(timezone.utc) - unfinished_dump.created_at).days > 0:
+                if abs(datetime.now(timezone.utc) - unfinished_dump.created_at).minutes > options['older_than']:
                     prune_dump.delay(job_id=unfinished_dump.job)
 
                     self.stdout.write(self.style.SUCCESS(f'Dump {unfinished_dump.job} scheduled for prune'))
