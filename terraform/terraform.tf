@@ -53,7 +53,7 @@ locals {
 
   ecs_ami             = "ami-03fc956d7468aa8a1"
   ecs_instance_size   = "t3.micro"
-  ecs_instances_count = 1
+  ecs_instances_count = 5  # На 1 машину помещается 3 инстанса воркера, celery или консоли
 
   availability_zones  = ["eu-north-1a", "eu-north-1b", "eu-north-1c"]
   vpc_cidr            = "10.0.0.0/16"
@@ -78,7 +78,7 @@ resource "aws_ecs_cluster" "cluster" {
 
 resource "aws_ecs_service" "celery" {
   name          = local.aws_ecs_service_celery_name
-  desired_count = 1
+  desired_count = 13
 
   cluster         = aws_ecs_cluster.cluster.id
   task_definition = aws_ecs_task_definition.celery.arn
