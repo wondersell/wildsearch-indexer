@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--job_id', type=str, required=False)
-        parser.add_argument('--older_than', type=int, required=False, default=24*60)
+        parser.add_argument('--older_than', type=int, required=False, default=24 * 60)
 
     def handle(self, *args, **options):
         console = logging.StreamHandler()
