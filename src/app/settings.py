@@ -161,16 +161,17 @@ HEALTH_CHECKS = {
 
 
 # Celery configs
-broker_url = env('REDIS_URL')
-broker_transport_options = {'max_retries': 3, 'interval_start': 0, 'interval_step': 0.2, 'interval_max': 0.5, 'visibility_timeout': 3600 * 48}
-result_backend = env('REDIS_URL')
+CELERY = {
+    'broker_url': env('REDIS_URL'),
+    'broker_transport_options': {'max_retries': 3, 'interval_start': 0, 'interval_step': 0.2, 'interval_max': 0.5, 'visibility_timeout': 3600 * 48},
+    'result_backend': env('REDIS_URL'),
 
-redis_max_connections = env('CELERY_REDIS_MAX_CONNECTIONS', cast=int, default=5)
-task_always_eager = env('CELERY_ALWAYS_EAGER', cast=bool, default=False)
-task_reject_on_worker_lost = env('CELERY_TASK_REJECT_ON_WORKER_LOST', cast=bool, default=True)
-timezone = TIME_ZONE
-enable_utc = False
-
+    'redis_max_connections': env('CELERY_REDIS_MAX_CONNECTIONS', cast=int, default=5),
+    'task_always_eager': env('CELERY_ALWAYS_EAGER', cast=bool, default=False),
+    'task_reject_on_worker_lost': env('CELERY_TASK_REJECT_ON_WORKER_LOST', cast=bool, default=True),
+    'timezone': TIME_ZONE,
+    'enable_utc': False,
+}
 
 # Application-specific configs
 SH_APIKEY = env('SH_APIKEY')
