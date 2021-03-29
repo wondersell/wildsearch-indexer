@@ -6,7 +6,7 @@ celery==4.4.7  # because of broken flower integration in 5.0.0
 flower==0.9.5
 requests==2.24.0
 python-dateutil==2.8.1
-gunicorn==20.0.4
+gunicorn==20.1.0
 psycopg2-binary==2.8.6
 
 djangorestframework>=3.11.0
