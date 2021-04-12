@@ -23,7 +23,7 @@ sentry-sdk
 
 ipython
 
-pytest-django==3.10.0
+pytest-django==4.2.0
 pytest-deadfixtures
 pytest-env
 pytest-freezegun
